@@ -92,11 +92,13 @@ function ValidationDisplay({
   onProceed,
   onBack,
   isGenerating,
+  generateProgress,
 }: {
   result: ValidationResult;
   onProceed: () => void;
   onBack: () => void;
   isGenerating: boolean;
+  generateProgress: string;
 }) {
   const { validation } = result;
 
@@ -153,7 +155,7 @@ function ValidationDisplay({
           수정하기
         </Button>
         <Button className="flex-1" onClick={onProceed} disabled={isGenerating}>
-          {isGenerating ? "플랜 생성 중..." : "이 목표로 플랜 생성"}
+          {isGenerating ? generateProgress || "플랜 생성 중..." : "이 목표로 플랜 생성"}
         </Button>
       </div>
     </div>
@@ -167,6 +169,7 @@ export default function OnboardingPage() {
   const [form, setForm] = useState<RunnerFormData>(INITIAL_FORM);
   const [step, setStep] = useState<Step>("form");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generateProgress, setGenerateProgress] = useState<string>("");
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -207,17 +210,51 @@ export default function OnboardingPage() {
   async function handleGenerate() {
     if (!validationResult) return;
     setIsGenerating(true);
+    setGenerateProgress("AI 코치가 훈련 플랜을 작성하고 있어요...");
     setError(null);
 
     try {
-      // 1. Generate plan
+      // 1. Stream plan generation
       const genRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formData: form, validation: validationResult }),
       });
       if (!genRes.ok) throw new Error(`플랜 생성 실패 (${genRes.status})`);
-      const generatedPlan: GeneratedPlan = await genRes.json();
+      if (!genRes.body) throw new Error("스트림 응답 없음");
+
+      const reader = genRes.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
+
+        // 에러 시그널 감지
+        if (fullText.includes("__ERROR__:")) {
+          const msg = fullText.split("__ERROR__:")[1].trim();
+          throw new Error(msg);
+        }
+
+        // 진행 상황: "week": N 패턴으로 현재 몇 주차 생성 중인지 파악
+        const weekMatches = fullText.match(/"week"\s*:\s*(\d+)/g);
+        if (weekMatches) {
+          const latest = weekMatches[weekMatches.length - 1].match(/\d+/)?.[0];
+          if (latest) setGenerateProgress(`훈련 일정 생성 중... ${latest}주차`);
+        }
+      }
+
+      setGenerateProgress("플랜 저장 중...");
+
+      // 마크다운 코드블록 제거 후 JSON 파싱
+      const cleaned = fullText
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/, "")
+        .trim();
+      const generatedPlan: GeneratedPlan = JSON.parse(cleaned);
 
       // 2. Save to Supabase
       const userId = getOrCreateAnonymousUserId();
@@ -228,12 +265,17 @@ export default function OnboardingPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
       setIsGenerating(false);
+      setGenerateProgress("");
     }
   }
 
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
   const minDateStr = minDate.toISOString().split("T")[0];
+
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 84);
+  const maxDateStr = maxDate.toISOString().split("T")[0];
 
   // ── Result screen ─────────────────────────────────────────────────────────
   if (step === "result" && validationResult) {
@@ -251,6 +293,7 @@ export default function OnboardingPage() {
               onProceed={handleGenerate}
               onBack={() => setStep("form")}
               isGenerating={isGenerating}
+              generateProgress={generateProgress}
             />
           </CardContent>
         </Card>
@@ -300,10 +343,12 @@ export default function OnboardingPage() {
                   <Input
                     type="date"
                     min={minDateStr}
+                    max={maxDateStr}
                     value={form.raceDate}
                     onChange={(e) => setField("raceDate", e.target.value)}
                     required
                   />
+                  <p className="text-sm text-muted-foreground">목표 일정은 12주 이내로 설정해 주세요.</p>
                 </div>
               </div>
 

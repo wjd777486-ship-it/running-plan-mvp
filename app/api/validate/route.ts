@@ -128,6 +128,14 @@ export async function POST(request: Request) {
     const raw =
       message.content[0].type === "text" ? message.content[0].text : "";
 
+    const { input_tokens, output_tokens } = message.usage;
+    const inputCost  = (input_tokens  / 1_000_000) * 3.0;
+    const outputCost = (output_tokens / 1_000_000) * 15.0;
+    console.log(
+      `[/api/validate] usage — input: ${input_tokens} tokens, output: ${output_tokens} tokens` +
+      ` | cost: $${(inputCost + outputCost).toFixed(6)} (in $${inputCost.toFixed(6)} + out $${outputCost.toFixed(6)})`
+    );
+
     console.log("[/api/validate] Raw AI response:", raw);
 
     // 마크다운 코드블록 제거 (```json ... ``` 또는 ``` ... ```)

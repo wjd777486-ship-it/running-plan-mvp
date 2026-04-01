@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { RunnerFormData, ValidationResult, GeneratedPlan } from "@/lib/types";
 
+export const maxDuration = 60;
+export const runtime = "nodejs";
+
 const client = new Anthropic();
 
 const GENERATE_PROMPT = `[역할]
@@ -105,43 +108,52 @@ export async function POST(request: Request) {
 ${body.validation.validation.realistic_goal.suggested_time ? `- 현실적 목표 기록 제안: ${body.validation.validation.realistic_goal.suggested_time}` : ""}
 `.trim();
 
-  try {
-    const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 16000,
-      messages: [
-        {
-          role: "user",
-          content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}`,
-        },
-      ],
-      system: systemPrompt,
-    });
+  const encoder = new TextEncoder();
 
-    const raw =
-      message.content[0].type === "text" ? message.content[0].text : "";
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const anthropicStream = client.messages.stream({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 16000,
+          messages: [
+            {
+              role: "user",
+              content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}`,
+            },
+          ],
+          system: systemPrompt,
+        });
 
-    console.log("[/api/generate] Raw AI response (first 500 chars):", raw.slice(0, 500));
+        for await (const chunk of anthropicStream) {
+          if (
+            chunk.type === "content_block_delta" &&
+            chunk.delta.type === "text_delta"
+          ) {
+            controller.enqueue(encoder.encode(chunk.delta.text));
+          }
+        }
 
-    // 마크다운 코드블록 제거
-    const text = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+        const finalMsg = await anthropicStream.finalMessage();
+        const { input_tokens, output_tokens } = finalMsg.usage;
+        const inputCost  = (input_tokens  / 1_000_000) * 3.0;
+        const outputCost = (output_tokens / 1_000_000) * 15.0;
+        console.log(
+          `[/api/generate] usage — input: ${input_tokens} tokens, output: ${output_tokens} tokens` +
+          ` | cost: $${(inputCost + outputCost).toFixed(6)} (in $${inputCost.toFixed(6)} + out $${outputCost.toFixed(6)})`
+        );
 
-    let result: GeneratedPlan;
-    try {
-      result = JSON.parse(text);
-    } catch (parseErr) {
-      console.error("[/api/generate] JSON parse failed. parseErr:", parseErr);
-      console.error("[/api/generate] Cleaned text (first 500 chars):", text.slice(0, 500));
-      return Response.json(
-        { error: "Failed to parse AI response", raw },
-        { status: 502 }
-      );
-    }
+        controller.close();
+      } catch (err) {
+        console.error("[/api/generate] Anthropic stream error:", err);
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        controller.enqueue(encoder.encode(`\n__ERROR__:${msg}`));
+        controller.close();
+      }
+    },
+  });
 
-    return Response.json(result);
-  } catch (err) {
-    console.error("[/api/generate] Anthropic API error:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
-  }
+  return new Response(stream, {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }

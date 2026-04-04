@@ -13,6 +13,15 @@ const BADGE: Record<WorkoutType, { bg: string; color: string; label: string }> =
   race:      { bg: "#FEF3C7", color: "#D97706", label: "대회" },
 };
 
+const WORKOUT_TITLE: Record<WorkoutType, string> = {
+  easy:      "이지런",
+  tempo:     "템포런",
+  intervals: "인터벌",
+  long:      "장거리",
+  rest:      "휴식",
+  race:      "대회",
+};
+
 const PHASE_LABEL: Record<Phase, string> = {
   base:  "기초 단계",
   build: "빌드업 단계",
@@ -29,8 +38,11 @@ function formatDuration(min: number): string {
 }
 
 function normalizeHrZone(zone: string): string {
-  // "Z2" → "Zone 2", "Z1~Z2" → "Zone 1~Zone 2", "Zone 2" → "Zone 2"
-  return zone.replace(/Z(\d)/g, "Zone $1");
+  // "Z1~Z2" → "Zone 1~2", "Z2" → "Zone 2", "Zone 1~Zone 2" → "Zone 1~2"
+  return zone
+    .replace(/Z(\d+)~Z(\d+)/g, "Zone $1~$2")
+    .replace(/Zone (\d+)~Zone (\d+)/g, "Zone $1~$2")
+    .replace(/Z(\d+)/g, "Zone $1");
 }
 
 type PaceRow = { label: string; dist: string; pace: string };
@@ -228,7 +240,7 @@ export default function WorkoutDetailPanel({
                 color: "#0A0A0A",
               }}
             >
-              {day.title ?? day.description}
+              {WORKOUT_TITLE[day.workoutType]}
             </span>
             {isToday && (
               <span
@@ -352,7 +364,7 @@ export default function WorkoutDetailPanel({
                       textAlign: "center",
                     }}
                   >
-                    페이스
+                    페이스(km당)
                   </span>
                 </div>
                 {/* Table rows */}
@@ -392,7 +404,7 @@ export default function WorkoutDetailPanel({
                         textAlign: "center",
                       }}
                     >
-                      {row.pace}
+                      {row.pace.replace(/\/km$/, "")}
                     </span>
                   </div>
                 ))}

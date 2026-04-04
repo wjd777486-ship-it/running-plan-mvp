@@ -27,6 +27,7 @@ interface CalendarDayCellProps {
   day: TrainingDay | undefined;
   isToday: boolean;
   isRaceDay: boolean;
+  isPlanStartDay: boolean;
   isSelected: boolean;
   isCompleted: boolean;
   isOutOfPlan: boolean;
@@ -39,33 +40,56 @@ export default function CalendarDayCell({
   day,
   isToday,
   isRaceDay,
+  isPlanStartDay,
   isSelected,
   isCompleted,
   isOutOfPlan,
   onSelect,
   onToggleComplete,
 }: CalendarDayCellProps) {
+  // Derived state priority
+  const showAsRaceSelected  = isRaceDay && isSelected;
+  const showAsRaceNormal    = isRaceDay && !isSelected;
+  const showAsStartSelected = isPlanStartDay && isSelected;
+  const showAsStartNormal   = isPlanStartDay && !isSelected;
+  const showAsSelected      = isSelected && !isRaceDay && !isPlanStartDay;
+
   return (
     <button
       onClick={onSelect}
       className={cn(
         "relative flex h-14 w-full flex-col items-start justify-start rounded-lg border p-1.5 text-left transition-colors",
-        "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isSelected && "bg-accent",
-        isToday && "ring-2 ring-primary",
-        isRaceDay && "ring-2 ring-yellow-400",
+        "hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        // backgrounds
+        isCompleted && !isSelected && "bg-[#F0FDF4]",
+        showAsRaceNormal && "bg-[#0088FF]",
+        // borders
+        showAsStartNormal   && "border-gray-400",
+        showAsSelected      && "border-[#0088FF]",
+        showAsStartSelected && "border-[#0088FF]",
+        showAsRaceSelected  && "border-[#0088FF]",
         isOutOfPlan && "opacity-40",
       )}
       aria-label={day ? `${dayNum}일 ${day.description}` : `${dayNum}일`}
       aria-pressed={isSelected}
     >
       {/* Date number */}
-      <span className={cn("text-xs font-medium leading-none", isToday && "font-bold text-primary")}>
+      <span className={cn(
+        "text-xs font-medium leading-none",
+        showAsRaceNormal   && "font-bold text-white",
+        showAsRaceSelected && "font-bold text-[#0088FF]",
+      )}>
         {dayNum}
       </span>
 
       {/* Workout indicator */}
-      {day && day.workoutType !== "rest" && (
+      {showAsRaceNormal ? (
+        <span className="mt-0.5 text-[10px] font-semibold text-white leading-none">D-day</span>
+      ) : showAsRaceSelected ? (
+        <span className="mt-0.5 text-[10px] font-semibold text-[#0088FF] leading-none">D-day</span>
+      ) : showAsStartNormal || showAsStartSelected ? (
+        <span className="mt-0.5 text-[10px] text-gray-400 leading-none">시작</span>
+      ) : day && day.workoutType !== "rest" ? (
         <div className="mt-0.5 flex items-center gap-1 min-w-0 w-full">
           <span className={cn("inline-block size-2 shrink-0 rounded-full", DOT_COLOR[day.workoutType])} />
           <span className="truncate text-[10px] text-muted-foreground leading-none">
@@ -73,10 +97,9 @@ export default function CalendarDayCell({
             {day.distanceKm != null ? ` ${day.distanceKm}km` : ""}
           </span>
         </div>
-      )}
-      {day && day.workoutType === "rest" && (
+      ) : day && day.workoutType === "rest" ? (
         <span className="mt-0.5 text-[10px] text-muted-foreground/60 leading-none">휴식</span>
-      )}
+      ) : null}
 
       {/* Completion check */}
       {isCompleted && (

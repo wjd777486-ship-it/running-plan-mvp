@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { GeneratedPlan, TrainingDay, WorkoutType, Phase } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import PlanHeader from "./PlanHeader";
 import MonthNav from "./MonthNav";
 import CalendarGrid from "./CalendarGrid";
@@ -10,7 +11,15 @@ import WorkoutDetailPanel from "./WorkoutDetailPanel";
 import WorkoutTypeLegend from "./WorkoutTypeLegend";
 
 function toDateStr(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatSelectedDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
 const SESSION_TYPE_MAP: Record<string, WorkoutType> = {
@@ -51,6 +60,9 @@ function buildDayMap(plan: GeneratedPlan): Map<string, TrainingDay> {
         durationMin: day.duration_min,
         purpose: day.purpose,
         sets: day.sets,
+        warmup: day.warmup ?? null,
+        cooldown: day.cooldown ?? null,
+        tempoSegment: day.tempo_segment ?? null,
       };
       map.set(day.date, td);
     }
@@ -68,13 +80,22 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = toDateStr(today);
-
-  const raceDate = new Date(generatedPlan.plan_summary.goal_date + "T00:00:00");
   const planStartStr = todayStr;
 
-  const [viewMonth, setViewMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [selectedDay, setSelectedDay] = useState<string | null>(todayStr);
+  const raceDate = new Date(generatedPlan.plan_summary.goal_date + "T00:00:00");
+  const raceDateStr = generatedPlan.plan_summary.goal_date;
+
+  const [selectedDay, setSelectedDay] = useState<string>(todayStr);
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
+
+  // Calendar bottom sheet state
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarAnimating, setCalendarAnimating] = useState(false);
+  const [viewMonth, setViewMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
+
+  const touchStartY = useRef<number | null>(null);
+  const touchCurrentY = useRef<number | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase
@@ -90,36 +111,65 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
 
   function toggleComplete(dateStr: string) {
     const isCompleted = completedDays.has(dateStr);
-
     setCompletedDays((prev) => {
       const next = new Set(prev);
-      if (isCompleted) {
-        next.delete(dateStr);
-      } else {
-        next.add(dateStr);
-      }
+      if (isCompleted) next.delete(dateStr);
+      else next.add(dateStr);
       return next;
     });
 
     if (isCompleted) {
-      supabase
-        .from("completions")
-        .delete()
-        .eq("plan_id", planId)
-        .eq("date", dateStr);
+      supabase.from("completions").delete().eq("plan_id", planId).eq("date", dateStr);
     } else {
-      supabase
-        .from("completions")
-        .insert({ plan_id: planId, date: dateStr });
+      supabase.from("completions").insert({ plan_id: planId, date: dateStr });
     }
   }
 
   const dayMap = useMemo(() => buildDayMap(generatedPlan), [generatedPlan]);
 
+  const firstPlanDay = useMemo(() => {
+    const keys = Array.from(dayMap.keys()).sort();
+    return keys[0] ?? todayStr;
+  }, [dayMap, todayStr]);
+
   const minYear = today.getFullYear();
   const minMonth = today.getMonth();
   const maxYear = raceDate.getFullYear();
   const maxMonth = raceDate.getMonth();
+
+  function openCalendar() {
+    // Sync viewMonth to selectedDay
+    const d = new Date(selectedDay + "T00:00:00");
+    setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
+    setCalendarOpen(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setCalendarAnimating(true));
+    });
+  }
+
+  function closeCalendar() {
+    setCalendarAnimating(false);
+    setTimeout(() => setCalendarOpen(false), 300);
+  }
+
+  function handleCalendarSelectDay(dateStr: string) {
+    setSelectedDay(dateStr);
+    closeCalendar();
+  }
+
+  function prevDay() {
+    const d = new Date(selectedDay + "T00:00:00");
+    d.setDate(d.getDate() - 1);
+    const newDate = toDateStr(d);
+    if (newDate >= firstPlanDay) setSelectedDay(newDate);
+  }
+
+  function nextDay() {
+    const d = new Date(selectedDay + "T00:00:00");
+    d.setDate(d.getDate() + 1);
+    const newDate = toDateStr(d);
+    if (newDate <= raceDateStr) setSelectedDay(newDate);
+  }
 
   function prevMonth() {
     setViewMonth((v) => {
@@ -135,16 +185,183 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
     });
   }
 
-  const selectedDayData = selectedDay ? (dayMap.get(selectedDay) ?? null) : null;
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    touchCurrentY.current = e.touches[0].clientY;
+    if (sheetRef.current && touchStartY.current !== null) {
+      const delta = Math.max(0, touchCurrentY.current - touchStartY.current);
+      sheetRef.current.style.transition = "none";
+      sheetRef.current.style.transform = `translateX(-50%) translateY(${delta}px)`;
+    }
+  }
+
+  function handleTouchEnd() {
+    if (touchStartY.current !== null && touchCurrentY.current !== null) {
+      const delta = touchCurrentY.current - touchStartY.current;
+      if (delta > 80) {
+        if (sheetRef.current) { sheetRef.current.style.transition = ""; sheetRef.current.style.transform = ""; }
+        closeCalendar();
+      } else {
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "";
+          sheetRef.current.style.transform = "translateX(-50%) translateY(0)";
+        }
+      }
+    }
+    touchStartY.current = null;
+    touchCurrentY.current = null;
+  }
+
+  const selectedDayData = dayMap.get(selectedDay) ?? null;
+  const canGoPrev = selectedDay > firstPlanDay;
+  const canGoNext = selectedDay < raceDateStr;
 
   return (
-    <main className="min-h-screen bg-muted/40 px-4 py-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <PlanHeader summary={generatedPlan.plan_summary} />
+    <main className="min-h-screen bg-white">
+      <div className="mx-auto w-[320px] pb-8">
+        {/* Plan header: title + stats card */}
+        <div style={{ paddingTop: 24 }}>
+          <PlanHeader
+            summary={generatedPlan.plan_summary}
+            dayMap={dayMap}
+            planStartStr={planStartStr}
+            completedDays={completedDays}
+          />
+        </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
-          {/* Calendar section */}
-          <div className="space-y-4 rounded-xl border bg-card p-4">
+        {/* Date navigation row */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 30,
+          }}
+        >
+          <button
+            type="button"
+            onClick={prevDay}
+            disabled={!canGoPrev}
+            style={{
+              width: 36,
+              height: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 10,
+              border: "none",
+              background: "none",
+              padding: "8px 8px 0px",
+              cursor: canGoPrev ? "pointer" : "default",
+              opacity: canGoPrev ? 1 : 0.3,
+            }}
+          >
+            <ChevronLeftIcon size={20} color="#0A0A0A" />
+          </button>
+
+          <button
+            type="button"
+            onClick={openCalendar}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "0 16px",
+              height: 41.5,
+              borderRadius: 10,
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              fontFamily: "Pretendard, sans-serif",
+              fontWeight: 600,
+              fontSize: 17,
+              lineHeight: "1.5em",
+              letterSpacing: "-0.0254em",
+              color: "#0A0A0A",
+            }}
+          >
+            {formatSelectedDate(selectedDay)}
+          </button>
+
+          <button
+            type="button"
+            onClick={nextDay}
+            disabled={!canGoNext}
+            style={{
+              width: 36,
+              height: 36,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: 10,
+              border: "none",
+              background: "none",
+              padding: "8px 8px 0px",
+              cursor: canGoNext ? "pointer" : "default",
+              opacity: canGoNext ? 1 : 0.3,
+            }}
+          >
+            <ChevronRightIcon size={20} color="#0A0A0A" />
+          </button>
+        </div>
+
+        {/* Workout detail for selected day */}
+        <div style={{ marginTop: 10 }}>
+          <WorkoutDetailPanel
+            day={selectedDayData}
+            isCompleted={completedDays.has(selectedDay)}
+            onToggleComplete={toggleComplete}
+            todayStr={todayStr}
+            raceDateStr={raceDateStr}
+            selectedDateStr={selectedDay}
+          />
+        </div>
+      </div>
+
+      {/* Calendar bottom sheet */}
+      {calendarOpen && (
+        <>
+          {/* Dim overlay */}
+          <div
+            onClick={closeCalendar}
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.5)",
+              zIndex: 40,
+              opacity: calendarAnimating ? 1 : 0,
+              transition: "opacity 300ms ease-out",
+            }}
+          />
+          {/* Sheet */}
+          <div
+            ref={sheetRef}
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: "50%",
+              transform: calendarAnimating ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(100%)",
+              transition: "transform 300ms ease-out",
+              width: 360,
+              backgroundColor: "#FFFFFF",
+              borderRadius: "24px 24px 0px 0px",
+              paddingTop: 20,
+              paddingLeft: 16,
+              paddingRight: 16,
+              paddingBottom: 32,
+              zIndex: 50,
+              maxHeight: "85vh",
+              overflowY: "auto",
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <MonthNav
               year={viewMonth.year}
               month={viewMonth.month}
@@ -155,31 +372,26 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
               onPrev={prevMonth}
               onNext={nextMonth}
             />
-            <CalendarGrid
-              year={viewMonth.year}
-              month={viewMonth.month}
-              dayMap={dayMap}
-              todayStr={todayStr}
-              raceDateStr={generatedPlan.plan_summary.goal_date}
-              planStartStr={planStartStr}
-              selectedDay={selectedDay}
-              completedDays={completedDays}
-              onSelectDay={(d) => setSelectedDay(d === selectedDay ? null : d)}
-              onToggleComplete={toggleComplete}
-            />
-            <WorkoutTypeLegend />
+            <div style={{ marginTop: 12 }}>
+              <CalendarGrid
+                year={viewMonth.year}
+                month={viewMonth.month}
+                dayMap={dayMap}
+                todayStr={todayStr}
+                raceDateStr={raceDateStr}
+                planStartStr={planStartStr}
+                selectedDay={selectedDay}
+                completedDays={completedDays}
+                onSelectDay={handleCalendarSelectDay}
+                onToggleComplete={toggleComplete}
+              />
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <WorkoutTypeLegend />
+            </div>
           </div>
-
-          {/* Detail panel */}
-          <div className="lg:sticky lg:top-8 lg:self-start">
-            <WorkoutDetailPanel
-              day={selectedDayData}
-              isCompleted={selectedDay ? completedDays.has(selectedDay) : false}
-              onToggleComplete={toggleComplete}
-            />
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </main>
   );
 }

@@ -31,11 +31,10 @@ export interface TrainingDay {
   hrZone?: string;
   durationMin?: number;
   purpose?: string;
-  sets?: {
-    rep_distance_m?: number;
-    rep_count?: number;
-    recovery_method?: string;
-  } | null;
+  sets?: GeneratedDaySets | null;
+  warmup?: WorkoutSegment | null;
+  cooldown?: WorkoutSegment | null;
+  tempoSegment?: WorkoutSegment | null;
 }
 
 export interface PhaseRange {
@@ -126,12 +125,24 @@ export interface ValidationResult {
       suggested_time: string | null;
       message: string;
     };
+    analysis: {
+      strengths: string[];
+      warnings: string[];
+      recommendations: string[];
+    };
   };
+}
+
+export interface WorkoutSegment {
+  distance_km: number;
+  pace: string;
 }
 
 export interface GeneratedDaySets {
   rep_distance_m?: number;
   rep_count?: number;
+  rep_pace?: string;
+  recovery_pace?: string;
   recovery_method?: string;
 }
 
@@ -145,6 +156,9 @@ export interface GeneratedDay {
   hr_zone: string;
   duration_min: number;
   sets: GeneratedDaySets | null;
+  warmup: WorkoutSegment | null;
+  cooldown: WorkoutSegment | null;
+  tempo_segment: WorkoutSegment | null;
   description: string;
   purpose: string;
   is_rest: boolean;

@@ -63,7 +63,8 @@ export default function CalendarGrid({
             return <div key={`blank-${idx}`} className="h-14" />;
           }
           const dateStr = toDateStr(year, month, dayNum);
-          const day = dayMap.get(dateStr);
+          // 대회일 이후 날짜는 훈련 데이터가 있어도 빈 셀로 처리
+          const day = dateStr > raceDateStr ? undefined : dayMap.get(dateStr);
           const isOutOfPlan = dateStr < planStartStr || dateStr > raceDateStr;
 
           return (
@@ -73,6 +74,7 @@ export default function CalendarGrid({
               day={day}
               isToday={dateStr === todayStr}
               isRaceDay={dateStr === raceDateStr}
+              isPlanStartDay={dateStr === planStartStr}
               isSelected={selectedDay === dateStr}
               isCompleted={completedDays.has(dateStr)}
               isOutOfPlan={isOutOfPlan}

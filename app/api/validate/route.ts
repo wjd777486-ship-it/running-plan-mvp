@@ -16,7 +16,7 @@ const VALIDATE_PROMPT = `[역할]
    - judgment에 따라 격려/주의/경고 메시지를 message 필드에 작성해
 
 2. 훈련 기간 충분성
-   - 오늘부터 대회일까지의 총 훈련 가능 주수를 계산해
+   - 총 훈련 가능 주수는 {total_weeks}주야 (서버에서 계산한 정확한 값, 직접 계산하지 말고 이 값을 그대로 사용해)
    - 목표 기록과 현재 실력 기반으로 필요 훈련 주수를 추정해
    - 총 주수 >= 필요 주수이면 PASS, 75~99%이면 WARN, 75% 미만이면 FAIL
    - judgment에 따라 격려/주의/경고 메시지를 message 필드에 작성해
@@ -33,6 +33,11 @@ const VALIDATE_PROMPT = `[역할]
    - 나머지는 YELLOW
    - 목표 기록이 비현실적일 경우 realistic_goal.suggested_time에 현실적인 목표 기록을 제안해 (형식: "H:MM:SS" 또는 "MM:SS")
    - 목표 기록이 적절하면 realistic_goal.suggested_time은 null
+
+5. AI 분석 결과 (analysis)
+   - strengths: 러너의 강점 2~3가지를 간결한 한국어 문장으로 (예: "충분한 마일리지 기반이 잘 다져져 있어요")
+   - warnings: 주의해야 할 점 1~2가지를 간결한 한국어 문장으로 (예: "대회까지 남은 기간이 조금 짧은 편이에요")
+   - recommendations: 훈련 추천사항 2~3가지를 간결한 한국어 문장으로 (예: "주 1회 템포런을 추가해보세요")
 
 [출력 형식]
 반드시 아래 JSON만 출력해. 설명이나 마크다운 코드블록 없이 JSON만.
@@ -61,6 +66,11 @@ const VALIDATE_PROMPT = `[역할]
     "realistic_goal": {
       "suggested_time": string | null,
       "message": string
+    },
+    "analysis": {
+      "strengths": [string],
+      "warnings": [string],
+      "recommendations": [string]
     }
   }
 }`;
@@ -91,7 +101,7 @@ function formatRunnerData(data: RunnerFormData): string {
     `나이: ${data.age}세`,
     `러닝 경력: ${data.expYears}년 ${data.expMonths}개월`,
     `최근 1주 주간 거리: ${data.weeklyMileage1}km`,
-    `최근 4주 평균 주간 거리: ${data.weeklyMileage4}km`,
+    `최근 4주 총 주행 거리: ${data.weeklyMileage4}km (주간 평균 ${Math.round(data.weeklyMileage4 / 4)}km)`,
     `최근 최대 장거리 런: ${data.maxRunDistance}km`,
     `주당 훈련 일수: ${data.trainingDays.length}일 (${data.trainingDays.join(", ")})`,
     `조깅 데이터 (HR<140): ${data.joggingDist}km, ${data.joggingPaceMin}:${String(data.joggingPaceSec).padStart(2, "0")}/km, HR ${data.joggingHr}${data.joggingCadence ? ", 케이던스 " + data.joggingCadence + "spm" : ""}`,
@@ -110,12 +120,22 @@ export async function POST(request: Request) {
   }
 
   const today = new Date().toISOString().split("T")[0];
-  const systemPrompt = VALIDATE_PROMPT.replace("{today}", today);
+  const daysUntilRace = Math.max(0, Math.floor(
+    (new Date(body.raceDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24)
+  ));
+  const totalWeeks = Math.floor(daysUntilRace / 7);
+
+  console.log("[/api/validate] 입력값:", JSON.stringify(body, null, 2));
+  console.log("[/api/validate] today:", today, "| daysUntilRace:", daysUntilRace, "| totalWeeks:", totalWeeks);
+
+  const systemPrompt = VALIDATE_PROMPT
+    .replace("{today}", today)
+    .replace("{total_weeks}", String(totalWeeks));
 
   try {
     const message = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [
         {
           role: "user",

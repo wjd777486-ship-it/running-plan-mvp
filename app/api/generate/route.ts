@@ -63,13 +63,14 @@ YELLOW 컨텍스트:
 - distance_km은 워밍업+본운동+쿨다운 포함한 총 주행 거리
 
 [출력 최적화 규칙]
-- rest 세션: sets/warmup/cooldown/tempo_segment는 출력하지 말 것 (null 값도 생략)
-- description과 purpose는 각 20자 이내로 간결하게
-- title은 10자 이내
+- day_of_week, purpose 필드는 출력하지 말 것
+- rest 세션: date, session_type, is_rest, title, distance_km(0), duration_min(0), description만 출력
+- easy/lsd 세션: sets, warmup, cooldown, tempo_segment 출력하지 말 것
+- description은 15자 이내, title은 8자 이내
 
 [출력 형식]
 반드시 JSON만 출력. 마크다운 포함 금지.
-{"plan_summary":{"goal_race":"","goal_date":"","goal_time":"","total_weeks":0,"total_sessions":0,"total_distance_km":0,"peak_weekly_distance_km":0,"taper_start_date":"","stats":{"total_easy_runs":0,"total_interval_sessions":0,"total_tempo_sessions":0,"total_lsd_sessions":0,"longest_run_km":0,"fastest_pace_target":"","slowest_pace_target":""}},"weekly_plans":[{"week":1,"theme":"","total_distance_km":0,"days":[{"date":"","day_of_week":"","session_type":"","title":"","distance_km":0,"pace_target":"","hr_zone":"","duration_min":0,"sets":{"rep_distance_m":1000,"rep_count":5,"rep_pace":"4:05/km","recovery_method":"조깅","recovery_pace":"6:30/km"},"warmup":null,"cooldown":null,"tempo_segment":null,"description":"","purpose":"","is_rest":false}]}]}`;
+{"plan_summary":{"goal_race":"","goal_date":"","goal_time":"","total_weeks":0,"total_sessions":0,"total_distance_km":0,"peak_weekly_distance_km":0,"taper_start_date":"","stats":{"total_easy_runs":0,"total_interval_sessions":0,"total_tempo_sessions":0,"total_lsd_sessions":0,"longest_run_km":0,"fastest_pace_target":"","slowest_pace_target":""}},"weekly_plans":[{"week":1,"theme":"","total_distance_km":0,"days":[{"date":"","session_type":"","title":"","distance_km":0,"pace_target":"","hr_zone":"","duration_min":0,"sets":{"rep_distance_m":1000,"rep_count":5,"rep_pace":"4:05/km","recovery_method":"조깅","recovery_pace":"6:30/km"},"warmup":null,"cooldown":null,"tempo_segment":null,"description":"","is_rest":false}]}]}`;
 
 const DAY_LABEL: Record<string, string> = {
   mon: "월요일(Monday)",
@@ -165,7 +166,7 @@ ${goalOverrideLine}
     async start(controller) {
       try {
         const anthropicStream = client.messages.stream({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-haiku-4-5-20251001",
           max_tokens: 32000,
           messages: [
             {

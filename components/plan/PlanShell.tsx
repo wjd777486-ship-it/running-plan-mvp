@@ -25,8 +25,10 @@ function formatSelectedDate(dateStr: string): string {
 const SESSION_TYPE_MAP: Record<string, WorkoutType> = {
   easy: "easy",
   interval: "intervals",
+  intervals: "intervals",
   tempo: "tempo",
   lsd: "long",
+  long: "long",
   rest: "rest",
   race: "race",
 };
@@ -46,7 +48,7 @@ function buildDayMap(plan: GeneratedPlan): Map<string, TrainingDay> {
   for (const week of plan.weekly_plans) {
     const phase = computePhase(week.week, totalWeeks);
     for (const day of week.days) {
-      const workoutType = SESSION_TYPE_MAP[day.session_type] ?? "rest";
+      const workoutType = SESSION_TYPE_MAP[day.session_type?.toLowerCase() ?? ""] ?? "rest";
       const td: TrainingDay = {
         date: day.date,
         workoutType,

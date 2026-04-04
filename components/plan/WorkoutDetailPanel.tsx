@@ -28,6 +28,11 @@ function formatDuration(min: number): string {
   return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
 }
 
+function normalizeHrZone(zone: string): string {
+  // "Z2" → "Zone 2", "Z1~Z2" → "Zone 1~Zone 2", "Zone 2" → "Zone 2"
+  return zone.replace(/Z(\d)/g, "Zone $1");
+}
+
 type PaceRow = { label: string; dist: string; pace: string };
 
 function buildPaceRows(day: TrainingDay): PaceRow[] {
@@ -43,7 +48,7 @@ function buildPaceRows(day: TrainingDay): PaceRow[] {
         const distStr = day.sets.rep_distance_m >= 1000
           ? `${day.sets.rep_distance_m / 1000}km`
           : `${day.sets.rep_distance_m}m`;
-        distLabel = `${distStr}×${day.sets.rep_count}set`;
+        distLabel = `${distStr}*${day.sets.rep_count}set`;
       }
       rows.push({ label: "인터벌", dist: distLabel, pace: day.sets.rep_pace ?? "-" });
       if (day.sets.recovery_method || day.sets.recovery_pace) {
@@ -287,7 +292,7 @@ export default function WorkoutDetailPanel({
                   <InfoRow label="총 거리" value={`${day.distanceKm}km`} valueColor="#0088FF" />
                 )}
                 {day.hrZone && (
-                  <InfoRow label="HR 존" value={day.hrZone} />
+                  <InfoRow label="HR 존" value={normalizeHrZone(day.hrZone)} />
                 )}
                 {day.durationMin != null && day.durationMin > 0 && (
                   <InfoRow label="예상 훈련 시간" value={formatDuration(day.durationMin)} />

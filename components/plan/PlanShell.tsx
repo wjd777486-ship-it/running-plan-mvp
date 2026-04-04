@@ -82,7 +82,6 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = toDateStr(today);
-  const planStartStr = todayStr;
 
   const raceDate = new Date(generatedPlan.plan_summary.goal_date + "T00:00:00");
   const raceDateStr = generatedPlan.plan_summary.goal_date;
@@ -133,6 +132,8 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
     const keys = Array.from(dayMap.keys()).sort();
     return keys[0] ?? todayStr;
   }, [dayMap, todayStr]);
+
+  const planStartStr = firstPlanDay;
 
   const minYear = today.getFullYear();
   const minMonth = today.getMonth();

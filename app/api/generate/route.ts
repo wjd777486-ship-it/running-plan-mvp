@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { RunnerFormData, ValidationResult, GeneratedPlan } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const runtime = "nodejs";
 
 const client = new Anthropic();
@@ -61,6 +61,11 @@ YELLOW 컨텍스트:
   rep_distance_m(숫자, 예: 1000), rep_count(숫자, 예: 5), rep_pace("M:SS/km"), recovery_method(문자열, 예: "조깅"), recovery_pace("M:SS/km")
 - easy/lsd/rest 세션: warmup, cooldown, tempo_segment 모두 null
 - distance_km은 워밍업+본운동+쿨다운 포함한 총 주행 거리
+
+[출력 최적화 규칙]
+- rest 세션: sets/warmup/cooldown/tempo_segment는 출력하지 말 것 (null 값도 생략)
+- description과 purpose는 각 20자 이내로 간결하게
+- title은 10자 이내
 
 [출력 형식]
 반드시 JSON만 출력. 마크다운 포함 금지.

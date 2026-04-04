@@ -90,7 +90,7 @@ function CheckmarkCircle({ selected }: { selected: boolean }) {
 
 function PlanDataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
-    <div className="flex items-center justify-between">
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
       <span style={{ fontWeight: 500, fontSize: 15, lineHeight: "1.5em", letterSpacing: "-0.0156em", color: "#4A5565" }}>
         {label}
       </span>
@@ -362,14 +362,14 @@ function ValidationDisplay({
             }}
           >
             {/* Header row */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
               <span style={{ fontWeight: 600, fontSize: 17, lineHeight: "1.45em", letterSpacing: "-0.0254em", color: "#0A0A0A" }}>
                 내가 세운 목표
               </span>
               <CheckmarkCircle selected={myCardSelected} />
             </div>
             {/* Data rows */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
               <PlanDataRow label="코스" value={raceLabel} />
               <PlanDataRow label="목표 기록" value={formGoalTime} />
               <PlanDataRow label="대회 날짜" value={raceDate} />
@@ -410,8 +410,8 @@ function ValidationDisplay({
                 }}
               >
                 {/* Header + subtitle */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
                     <span style={{ fontWeight: 600, fontSize: 17, lineHeight: "1.45em", letterSpacing: "-0.0254em", color: "#0A0A0A" }}>
                       AI 추천 목표
                     </span>
@@ -422,7 +422,7 @@ function ValidationDisplay({
                   </p>
                 </div>
                 {/* Data rows */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
                   <PlanDataRow label="코스" value={raceLabel} />
                   <PlanDataRow label="목표 기록" value={aiTimeDisplay} valueColor="#0088FF" />
                   <PlanDataRow label="대회 날짜" value={raceDate} />

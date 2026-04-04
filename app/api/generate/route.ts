@@ -299,6 +299,87 @@ ${suggestedTimeLine}
 ${goalOverrideLine}
 `.trim();
 
+  // VDOT 테이블 (sec/km)
+  const vdotTable = [
+    { v:30, easy:461, lsd:486, tempo:411, interval:386 },
+    { v:32, easy:441, lsd:464, tempo:393, interval:368 },
+    { v:34, easy:422, lsd:444, tempo:375, interval:351 },
+    { v:36, easy:405, lsd:426, tempo:359, interval:336 },
+    { v:38, easy:389, lsd:410, tempo:344, interval:321 },
+    { v:40, easy:375, lsd:395, tempo:331, interval:308 },
+    { v:42, easy:362, lsd:381, tempo:319, interval:296 },
+    { v:44, easy:350, lsd:368, tempo:308, interval:285 },
+    { v:46, easy:339, lsd:356, tempo:297, interval:275 },
+    { v:48, easy:329, lsd:346, tempo:288, interval:265 },
+    { v:50, easy:319, lsd:336, tempo:279, interval:256 },
+    { v:52, easy:310, lsd:327, tempo:270, interval:248 },
+    { v:54, easy:302, lsd:318, tempo:262, interval:240 },
+    { v:56, easy:294, lsd:310, tempo:255, interval:233 },
+    { v:58, easy:287, lsd:302, tempo:248, interval:226 },
+    { v:60, easy:280, lsd:295, tempo:242, interval:220 },
+  ];
+
+  function interpolatePaces(vdot: number) {
+    const clamped = Math.max(30, Math.min(60, vdot));
+    const lower = [...vdotTable].reverse().find(r => r.v <= clamped) ?? vdotTable[0];
+    const upper = vdotTable.find(r => r.v >= clamped) ?? vdotTable[vdotTable.length - 1];
+    if (lower.v === upper.v) return lower;
+    const ratio = (clamped - lower.v) / (upper.v - lower.v);
+    return {
+      easy:     lower.easy     + ratio * (upper.easy     - lower.easy),
+      lsd:      lower.lsd      + ratio * (upper.lsd      - lower.lsd),
+      tempo:    lower.tempo    + ratio * (upper.tempo    - lower.tempo),
+      interval: lower.interval + ratio * (upper.interval - lower.interval),
+    };
+  }
+
+  function toMinSec(sec: number): string {
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}/km`;
+  }
+
+  const raceDistanceMap: Record<string, number> = {
+    '5k': 5, '10k': 10, 'half': 21.0975, 'full': 42.195
+  };
+
+  const currentVdot = body.validation.validation.vdot.estimated_current;
+  const paces = interpolatePaces(currentVdot);
+
+  // Easy: 표 값과 조깅 페이스 중 더 느린 값
+  const jogPaceSec = body.formData.joggingPaceMin * 60 + body.formData.joggingPaceSec;
+  const easySec = Math.max(paces.easy, jogPaceSec);
+
+  // LSD: easy + offset
+  const lsdSec = easySec + (paces.lsd - paces.easy);
+
+  // 목표 레이스 페이스
+  const goalTotalSec = body.formData.goalHours * 3600 + body.formData.goalMinutes * 60;
+  const goalDistKm = raceDistanceMap[body.formData.raceType] ?? 10;
+  const racePaceSec = goalTotalSec / goalDistKm;
+
+  // 인터벌 단계별 페이스
+  const runPaceSec = body.formData.runningPaceMin * 60 + body.formData.runningPaceSec;
+  const rawFront = paces.interval;
+  const rawMid   = (paces.interval + racePaceSec + 15) / 2;
+  const rawLate  = racePaceSec + 12;
+
+  // 검증: 러닝 페이스보다 반드시 빨라야 함
+  const intervalFront = Math.min(rawFront, runPaceSec - 10);
+  const intervalMid   = Math.min(rawMid,   runPaceSec - 10);
+  const intervalLate  = Math.min(rawLate,  runPaceSec - 10);
+
+  const calculatedPaces = `
+[계산된 페이스 — 반드시 이 값을 그대로 사용할 것. 재계산 금지]
+Easy 페이스: ${toMinSec(easySec)}
+LSD 페이스: ${toMinSec(lsdSec)}
+워밍업/쿨다운/회복 조깅: ${toMinSec(easySec)}
+Tempo 페이스: ${toMinSec(paces.tempo)}
+인터벌 전반 페이스: ${toMinSec(intervalFront)}
+인터벌 중반 페이스: ${toMinSec(intervalMid)}
+인터벌 후반 페이스: ${toMinSec(intervalLate)}
+`;
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -310,7 +391,7 @@ ${goalOverrideLine}
           messages: [
             {
               role: "user",
-              content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}\n\n현재 VDOT: ${body.validation.validation.vdot.estimated_current} (이 값을 그대로 사용할 것. 재계산 금지)`,
+              content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}\n\n현재 VDOT: ${body.validation.validation.vdot.estimated_current} (이 값을 그대로 사용할 것. 재계산 금지)${calculatedPaces}`,
             },
           ],
           system: systemPrompt,

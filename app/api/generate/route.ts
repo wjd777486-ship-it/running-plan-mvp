@@ -86,7 +86,12 @@ VDOT | Easy  | LSD   | Tempo | Interval
   58 | 4:47  | 5:02  | 4:08  | 3:46
   60 | 4:40  | 4:55  | 4:02  | 3:40
 
-현재 VDOT 추정 우선순위
+current_vdot 사용 규칙 (최우선 준수)
+- user 메시지에 "현재 VDOT: N" 값이 명시된 경우, 이 값은 이미 검증된 값이다.
+- 절대 재계산하지 말고 이 값을 VDOT 기준표에 직접 대입해서 페이스를 계산해라.
+- PB, HR 데이터 등을 이용한 자체 VDOT 재추정 금지.
+
+현재 VDOT 추정 우선순위 (current_vdot가 없는 경우에만 적용)
 1. PB가 있으면 PB 기반 VDOT 직접 계산
 2. PB 없으면 HR>140 러닝 페이스 기반 역산
    - 5km 이상의 신뢰 가능한 데이터일 때만 사용
@@ -305,7 +310,7 @@ ${goalOverrideLine}
           messages: [
             {
               role: "user",
-              content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}`,
+              content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}\n\n현재 VDOT: ${body.validation.validation.vdot.estimated_current} (이 값을 그대로 사용할 것. 재계산 금지)`,
             },
           ],
           system: systemPrompt,

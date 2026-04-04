@@ -12,7 +12,10 @@ const VALIDATE_PROMPT = `[역할]
    - 러너의 현재 조깅/러닝 데이터로 현재 VDOT를 추정해
    - 목표 기록 달성에 필요한 VDOT를 계산해
    - 두 VDOT의 차이(gap)를 계산해
-   - gap이 0~5이면 PASS, 6~10이면 WARN, 11이상이면 FAIL
+   - 갭 0~3 → 기간 무관 PASS
+   - 갭 4~6 → 훈련 기간 8주 이상이면 PASS, 미만이면 WARN
+   - 갭 7~10 → 훈련 기간 12주 이상이면 WARN, 미만이면 FAIL
+   - 갭 11 이상 → 기간 무관 FAIL
    - judgment에 따라 격려/주의/경고 메시지를 message 필드에 작성해
 
 2. 훈련 기간 충분성

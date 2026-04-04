@@ -613,10 +613,10 @@ export default function OnboardingPage() {
         }
       }
 
-      const cleaned = fullText
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/, "")
-        .trim();
+      const jsonStart = fullText.indexOf("{");
+      const jsonEnd = fullText.lastIndexOf("}");
+      if (jsonStart === -1 || jsonEnd === -1) throw new Error("플랜 응답에서 JSON을 찾을 수 없어요. 다시 시도해주세요.");
+      const cleaned = fullText.slice(jsonStart, jsonEnd + 1);
       const generatedPlan: GeneratedPlan = JSON.parse(cleaned);
       setGeneratingWeeks(generatedPlan.plan_summary.total_weeks);
       const userId = getOrCreateAnonymousUserId();

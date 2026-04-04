@@ -161,7 +161,7 @@ ${goalOverrideLine}
       try {
         const anthropicStream = client.messages.stream({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
+          max_tokens: 32000,
           messages: [
             {
               role: "user",

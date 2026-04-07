@@ -362,7 +362,7 @@ ${goalOverrideLine}
   const runPaceSec = body.formData.runningPaceMin * 60 + body.formData.runningPaceSec;
   const rawFront = paces.interval;
   const rawMid   = (paces.interval + racePaceSec + 15) / 2;
-  const rawLate  = racePaceSec + 12;
+  const rawLate  = racePaceSec - 10;
 
   // 검증: 러닝 페이스보다 반드시 빨라야 함
   const intervalFront = Math.min(rawFront, runPaceSec - 10);

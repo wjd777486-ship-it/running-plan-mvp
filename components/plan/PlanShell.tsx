@@ -48,14 +48,34 @@ function InviteCodeSection() {
     }
   }
 
-  function handleKakaoShare() {
-    const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void }; isInitialized?: () => boolean } }).Kakao;
-    console.log("[KakaoShare] Kakao:", kakao, "initialized:", kakao?.isInitialized?.(), "Share:", kakao?.Share);
-    if (!kakao?.Share) {
-      console.error("[KakaoShare] Kakao.Share not available — SDK not loaded or not initialized");
-      return;
-    }
+  type KakaoType = { Share: { sendDefault: (opts: unknown) => void }; isInitialized: () => boolean; init: (key: string) => void };
+
+  function getKakao(): KakaoType | null {
+    return (window as unknown as { Kakao?: KakaoType }).Kakao ?? null;
+  }
+
+  function loadKakaoSDK(): Promise<KakaoType> {
+    return new Promise((resolve, reject) => {
+      const existing = getKakao();
+      if (existing) { resolve(existing); return; }
+      const script = document.createElement("script");
+      script.src = "https://developers.kakao.com/sdk/js/kakao.js";
+      script.onload = () => {
+        const kakao = getKakao();
+        if (kakao) resolve(kakao);
+        else reject(new Error("Kakao object not found after script load"));
+      };
+      script.onerror = () => reject(new Error("Failed to load Kakao SDK script"));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function handleKakaoShare() {
     try {
+      const kakao = await loadKakaoSDK();
+      const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+      if (!key) { console.error("[KakaoShare] NEXT_PUBLIC_KAKAO_JS_KEY not set"); return; }
+      if (!kakao.isInitialized()) kakao.init(key);
       kakao.Share.sendDefault({
         objectType: "feed",
         content: {
@@ -78,7 +98,7 @@ function InviteCodeSection() {
         ],
       });
     } catch (e) {
-      console.error("[KakaoShare] sendDefault failed:", e);
+      console.error("[KakaoShare] failed:", e);
     }
   }
 

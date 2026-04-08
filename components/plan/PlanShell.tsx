@@ -315,7 +315,8 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
       .from("completions")
       .select("date")
       .eq("plan_id", planId)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        console.log("[completions] select:", data, error);
         if (data) {
           setCompletedDays(new Set(data.map((r: { date: string }) => r.date)));
         }
@@ -332,9 +333,11 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
     });
 
     if (isCompleted) {
-      supabase.from("completions").delete().eq("plan_id", planId).eq("date", dateStr);
+      supabase.from("completions").delete().eq("plan_id", planId).eq("date", dateStr)
+        .then(({ error }) => { if (error) console.error("[completions] delete error:", error); });
     } else {
-      supabase.from("completions").insert({ plan_id: planId, date: dateStr });
+      supabase.from("completions").insert({ plan_id: planId, date: dateStr })
+        .then(({ error }) => { if (error) console.error("[completions] insert error:", error); });
     }
   }
 

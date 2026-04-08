@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "러닝 플랜 | 대회를 위한 맞춤 훈련",
-  description: "대회 날짜와 현재 러닝 수준을 입력하면 D-day까지 매일 훈련 플랜을 자동 생성해줍니다.",
+  title: "뛰뛰빵빵 | AI 러닝 훈련 플랜",
+  description: "AI 러닝 코치가 대회 목표에 맞춰 훈련 계획을 짜줘요.",
+  openGraph: {
+    title: "뛰뛰빵빵 — AI 러닝 훈련 플랜",
+    description: "AI 러닝 코치가 대회 목표에 맞춰 훈련 계획을 짜줘요.",
+    url: "https://running-plan-mvp.vercel.app",
+    siteName: "뛰뛰빵빵",
+    images: [{ url: "https://running-plan-mvp.vercel.app/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
 };
 
 export default function RootLayout({

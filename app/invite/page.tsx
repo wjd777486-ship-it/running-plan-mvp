@@ -35,8 +35,10 @@ export default function InvitePage() {
       if (data.valid) {
         localStorage.setItem("invite_code", trimmed);
         router.push("/onboarding");
+      } else if (data.reason === "exhausted") {
+        setError("이미 사용한 초대코드예요.");
       } else {
-        setError("유효하지 않은 초대코드예요. 다시 확인해주세요.");
+        setError("유효하지 않은 초대코드예요.");
       }
     } catch {
       setError("오류가 발생했어요. 다시 시도해주세요.");

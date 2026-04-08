@@ -1,5 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 
+const MAX_USES = 3;
+
 export async function POST(request: Request) {
   let body: { code: string };
   try {
@@ -9,15 +11,14 @@ export async function POST(request: Request) {
   }
 
   const code = body.code?.trim().toUpperCase();
-  if (!code) return Response.json({ valid: false });
+  if (!code) return Response.json({ valid: false, reason: "not_found" });
 
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("invite_codes")
-    .select("code")
+    .select("code, use_count")
     .eq("code", code)
     .eq("is_active", true)
-    .is("used_by", null)
     .maybeSingle();
 
   if (error) {
@@ -25,5 +26,8 @@ export async function POST(request: Request) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  return Response.json({ valid: !!data });
+  if (!data) return Response.json({ valid: false, reason: "not_found" });
+  if (data.use_count >= MAX_USES) return Response.json({ valid: false, reason: "exhausted" });
+
+  return Response.json({ valid: true });
 }

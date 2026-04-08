@@ -1,5 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 
+const MAX_USES = 3;
+
 export async function POST(request: Request) {
   let body: { code: string; sessionId: string };
   try {
@@ -15,12 +17,30 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServerSupabase();
-  const { error } = await supabase
+
+  // 현재 use_count 조회
+  const { data, error: fetchError } = await supabase
     .from("invite_codes")
-    .update({ used_by: sessionId, used_at: new Date().toISOString() })
+    .select("use_count")
     .eq("code", code)
     .eq("is_active", true)
-    .is("used_by", null);
+    .maybeSingle();
+
+  if (fetchError || !data) {
+    return Response.json({ success: false });
+  }
+
+  const newCount = data.use_count + 1;
+  const { error } = await supabase
+    .from("invite_codes")
+    .update({
+      use_count: newCount,
+      used_by: sessionId,
+      used_at: new Date().toISOString(),
+      ...(newCount >= MAX_USES ? { is_active: false } : {}),
+    })
+    .eq("code", code)
+    .eq("use_count", data.use_count); // optimistic lock
 
   if (error) {
     console.error("[/api/invite/use]", error);

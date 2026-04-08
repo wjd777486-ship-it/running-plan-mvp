@@ -49,7 +49,6 @@ function InviteCodeSection() {
   }
 
   function handleKakaoShare() {
-    if (!myCode) return;
     const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void } } }).Kakao;
     if (!kakao?.Share) return;
     kakao.Share.sendDefault({
@@ -142,7 +141,6 @@ function InviteCodeSection() {
         <button
           type="button"
           onClick={handleKakaoShare}
-          disabled={!myCode}
           style={{
             width: 135,
             padding: "15px 0",
@@ -154,8 +152,7 @@ function InviteCodeSection() {
             fontSize: 14,
             lineHeight: "1.4em",
             fontFamily: "Pretendard, sans-serif",
-            cursor: myCode ? "pointer" : "default",
-            opacity: myCode ? 1 : 0.4,
+            cursor: "pointer",
           }}
         >
           카카오톡 공유

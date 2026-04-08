@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { GeneratedPlan, TrainingDay, WorkoutType, Phase } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CopyIcon } from "lucide-react";
 import PlanHeader from "./PlanHeader";
 import MonthNav from "./MonthNav";
 import CalendarGrid from "./CalendarGrid";
@@ -121,21 +121,31 @@ function InviteCodeSection() {
           disabled={loading}
           style={{
             width: 135,
-            padding: "15px 0",
+            padding: myCode ? "15px 20px" : "15px 0",
             borderRadius: 14,
             border: "1px solid #0088FF",
             backgroundColor: "#FFFFFF",
             color: "#0088FF",
             fontWeight: 600,
-            fontSize: 14,
+            fontSize: myCode ? 18 : 14,
             lineHeight: "1.4em",
+            letterSpacing: myCode ? "-0.024em" : "normal",
             fontFamily: "Pretendard, sans-serif",
             cursor: loading ? "default" : "pointer",
             opacity: loading ? 0.6 : 1,
-            letterSpacing: myCode ? "0.05em" : "normal",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            boxSizing: "border-box",
           }}
         >
-          {loading ? "생성 중..." : myCode ?? "초대코드 받기"}
+          {loading ? "생성 중..." : myCode ? (
+            <>
+              <span>{myCode}</span>
+              <CopyIcon size={20} color="#0088FF" strokeWidth={1.5} />
+            </>
+          ) : "초대코드 받기"}
         </button>
 
         <button

@@ -49,28 +49,37 @@ function InviteCodeSection() {
   }
 
   function handleKakaoShare() {
-    const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void } } }).Kakao;
-    if (!kakao?.Share) return;
-    kakao.Share.sendDefault({
-      objectType: "feed",
-      content: {
-        title: "AI 러닝 훈련 짜기 초대코드",
-        description: `초대코드: ${myCode}`,
-        link: {
-          mobileWebUrl: "https://running-plan-mvp.vercel.app",
-          webUrl: "https://running-plan-mvp.vercel.app",
-        },
-      },
-      buttons: [
-        {
-          title: "훈련 플랜 받기",
+    const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void }; isInitialized?: () => boolean } }).Kakao;
+    console.log("[KakaoShare] Kakao:", kakao, "initialized:", kakao?.isInitialized?.(), "Share:", kakao?.Share);
+    if (!kakao?.Share) {
+      console.error("[KakaoShare] Kakao.Share not available — SDK not loaded or not initialized");
+      return;
+    }
+    try {
+      kakao.Share.sendDefault({
+        objectType: "feed",
+        content: {
+          title: "뛰뛰빵빵 — AI 러닝 훈련 플랜",
+          description: "AI 러닝 코치가 대회 목표에 맞춰 훈련 계획을 짜줘요.",
+          imageUrl: "https://running-plan-mvp.vercel.app/og-image.png",
           link: {
-            mobileWebUrl: "https://running-plan-mvp.vercel.app",
-            webUrl: "https://running-plan-mvp.vercel.app",
+            mobileWebUrl: "https://running-plan-mvp.vercel.app/invite",
+            webUrl: "https://running-plan-mvp.vercel.app/invite",
           },
         },
-      ],
-    });
+        buttons: [
+          {
+            title: "훈련 플랜 받기",
+            link: {
+              mobileWebUrl: "https://running-plan-mvp.vercel.app/invite",
+              webUrl: "https://running-plan-mvp.vercel.app/invite",
+            },
+          },
+        ],
+      });
+    } catch (e) {
+      console.error("[KakaoShare] sendDefault failed:", e);
+    }
   }
 
   return (

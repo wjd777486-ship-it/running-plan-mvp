@@ -588,15 +588,32 @@ ${goalOverrideLine}
     })
     .join("\n");
 
+  // Easy 페이스 3구간 계산 (테이퍼 2주 제외한 buildWeeks 기준)
+  const easyFrontEnd = Math.floor(buildWeeks / 3);
+  const easyMidEnd = Math.floor((2 * buildWeeks) / 3);
+  const easyFrontSec = easySec;
+  const easyMidSec = easySec - 5;
+  const easyLateSec = easySec - 10;
+
+  // 테이퍼 시작 주차: 마지막 2주만 테이퍼 (totalWeeks - 1)
+  const taperStartWeekNum = totalWeeks - 1;
+
   const calculatedPaces = `
 [계산된 페이스 — 반드시 이 값을 그대로 사용할 것. 재계산 금지]
-Easy 페이스: ${toMinSec(easySec)}
+전반 Easy 페이스 (1~${easyFrontEnd}주): ${toMinSec(easyFrontSec)}
+중반 Easy 페이스 (${easyFrontEnd + 1}~${easyMidEnd}주): ${toMinSec(easyMidSec)}
+후반 Easy 페이스 (${easyMidEnd + 1}~${buildWeeks}주, 테이퍼 제외): ${toMinSec(easyLateSec)}
 LSD 페이스: ${toMinSec(lsdSec)}
-워밍업/쿨다운/회복 조깅: ${toMinSec(easySec)}
+워밍업/쿨다운/회복 조깅: ${toMinSec(easyFrontSec)}
 Tempo 페이스: ${toMinSec(paces.tempo)}
 인터벌 전반 페이스: ${toMinSec(intervalFront)}
 인터벌 중반 페이스: ${toMinSec(intervalMid)}
 인터벌 후반 페이스: ${toMinSec(intervalLate)}
+
+[테이퍼링 — 반드시 이 주차를 그대로 사용할 것]
+taper_start_week: ${taperStartWeekNum} (${taperStartWeekNum}주차부터 테이퍼 시작, 마지막 2주만 테이퍼)
+대회 2주 전 (${taperStartWeekNum}주차): 볼륨 40% 감소, 인터벌 1회 유지
+대회 1주 전 (${totalWeeks}주차): 볼륨 60% 감소, 인터벌 없음, easy만
 
 [LSD 거리 기준 — 반드시 이 값을 그대로 사용할 것]
 LSD 시작값: ${lsdStartKm}km | LSD 피크: ${lsdPeakKm}km
@@ -651,6 +668,9 @@ ${lsdScheduleText}
           controller.close();
           return;
         }
+
+        // taper_start_week 강제 오버라이드: 마지막 2주만 테이퍼
+        v2Plan.plan_summary.taper_start_week = taperStartWeekNum;
 
         const finalPlan = assignDatesToPlan(v2Plan, body.formData, today);
         console.log("[/api/generate-v2] 날짜 배정 완료. 주차 수:", finalPlan.weekly_plans.length);

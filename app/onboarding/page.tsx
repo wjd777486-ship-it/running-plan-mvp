@@ -512,9 +512,12 @@ export default function OnboardingPage() {
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // 초대코드 게이트: localStorage에 없으면 /invite로 리다이렉트
+  // 기존 플랜이 있으면 바로 플랜 페이지로 이동
   useEffect(() => {
     const code = localStorage.getItem("invite_code");
-    if (!code) router.replace("/invite");
+    if (!code) { router.replace("/invite"); return; }
+    const savedPlanId = localStorage.getItem("plan_id");
+    if (savedPlanId) { router.replace(`/plan?id=${savedPlanId}`); return; }
   }, [router]);
 
   function setField<K extends keyof RunnerFormData>(key: K, value: RunnerFormData[K]) {
@@ -639,6 +642,7 @@ export default function OnboardingPage() {
         }).catch(() => {});
       }
 
+      localStorage.setItem("plan_id", result.planId);
       router.push(`/plan?id=${result.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");

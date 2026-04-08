@@ -340,7 +340,7 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
     } else {
       (async () => {
         const { error } = await supabase.from("completions").insert({ plan_id: planId, date: dateStr });
-        if (error) console.error("[completions] insert error:", error);
+        if (error) console.error("[completions] insert error:", error.code, error.message, error.details, error.hint);
       })();
     }
   }

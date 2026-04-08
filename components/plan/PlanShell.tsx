@@ -48,107 +48,114 @@ function InviteCodeSection() {
     }
   }
 
+  function handleKakaoShare() {
+    if (!myCode) return;
+    const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void } } }).Kakao;
+    if (!kakao?.Share) return;
+    kakao.Share.sendDefault({
+      objectType: "feed",
+      content: {
+        title: "AI 러닝 훈련 짜기 초대코드",
+        description: `초대코드: ${myCode}`,
+        link: {
+          mobileWebUrl: "https://running-plan-mvp.vercel.app",
+          webUrl: "https://running-plan-mvp.vercel.app",
+        },
+      },
+      buttons: [
+        {
+          title: "훈련 플랜 받기",
+          link: {
+            mobileWebUrl: "https://running-plan-mvp.vercel.app",
+            webUrl: "https://running-plan-mvp.vercel.app",
+          },
+        },
+      ],
+    });
+  }
+
   return (
     <div
       style={{
         marginTop: 24,
-        borderTop: "1px solid rgba(60,60,67,0.12)",
-        paddingTop: 24,
+        width: 320,
+        padding: "0 20px",
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: 10,
+        boxSizing: "border-box",
       }}
     >
-      <p
-        style={{
-          fontWeight: 600,
-          fontSize: 17,
-          lineHeight: "1.45em",
-          letterSpacing: "-0.0254em",
-          color: "#0A0A0A",
-          margin: 0,
-        }}
-      >
-        내 주변 러너에게도 알려주세요
-      </p>
+      {/* 타이틀 + 설명 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span
+          style={{
+            fontWeight: 600,
+            fontSize: 17,
+            lineHeight: "1.45em",
+            letterSpacing: "-0.0254em",
+            color: "#0A0A0A",
+          }}
+        >
+          내 주변 러너에게도 알려주세요
+        </span>
+        <p
+          style={{
+            margin: 0,
+            fontWeight: 400,
+            fontSize: 14,
+            lineHeight: "1.5em",
+            letterSpacing: "-0.01em",
+            color: "#364153",
+            whiteSpace: "pre-line",
+          }}
+        >
+          {"[초대코드 받기] 버튼 클릭\n[카카오톡 공유] 버튼 클릭\n복사한 초대코드 붙여넣기\n* 초대코드 1개당 3회 이용할 수 있어요."}
+        </p>
+      </div>
 
-      <p
-        style={{
-          fontSize: 13,
-          lineHeight: "1.6em",
-          color: "#4A5565",
-          margin: 0,
-          whiteSpace: "pre-line",
-        }}
-      >
-        {"[초대코드 받기] 버튼 클릭\n[카카오톡 공유] 버튼 클릭\n복사한 초대코드 붙여넣기\n* 초대코드 1개당 1회 이용할 수 있어요."}
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* 버튼 2개 나란히 */}
+      <div style={{ display: "flex", gap: 10, width: 280 }}>
         <button
           type="button"
           onClick={handleGetCode}
           disabled={loading}
           style={{
-            width: "100%",
-            height: 52,
-            borderRadius: 12,
-            border: "none",
-            backgroundColor: "#0088FF",
-            color: "#FFFFFF",
+            width: 135,
+            padding: "15px 0",
+            borderRadius: 14,
+            border: "1px solid #0088FF",
+            backgroundColor: "#FFFFFF",
+            color: "#0088FF",
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: 14,
             lineHeight: "1.4em",
+            fontFamily: "Pretendard, sans-serif",
             cursor: loading ? "default" : "pointer",
             opacity: loading ? 0.6 : 1,
-            fontFamily: "Pretendard, sans-serif",
+            letterSpacing: myCode ? "0.05em" : "normal",
           }}
         >
-          {loading ? "생성 중..." : myCode ? myCode : "초대코드 받기"}
+          {loading ? "생성 중..." : myCode ?? "초대코드 받기"}
         </button>
 
-        {/* 카카오톡 공유 버튼 */}
         <button
           type="button"
-          onClick={() => {
-            if (!myCode) return;
-            const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void } } }).Kakao;
-            if (!kakao?.Share) return;
-            kakao.Share.sendDefault({
-              objectType: "feed",
-              content: {
-                title: "AI 러닝 훈련 짜기 초대코드",
-                description: `초대코드: ${myCode}`,
-                link: {
-                  mobileWebUrl: "https://running-plan-mvp.vercel.app",
-                  webUrl: "https://running-plan-mvp.vercel.app",
-                },
-              },
-              buttons: [
-                {
-                  title: "훈련 플랜 받기",
-                  link: {
-                    mobileWebUrl: "https://running-plan-mvp.vercel.app",
-                    webUrl: "https://running-plan-mvp.vercel.app",
-                  },
-                },
-              ],
-            });
-          }}
+          onClick={handleKakaoShare}
           disabled={!myCode}
           style={{
-            width: "100%",
-            height: 52,
-            borderRadius: 12,
-            border: "1px solid rgba(60,60,67,0.29)",
+            width: 135,
+            padding: "15px 0",
+            borderRadius: 14,
+            border: "1px solid #0088FF",
             backgroundColor: "#FFFFFF",
-            color: "#0A0A0A",
+            color: "#0088FF",
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: 14,
             lineHeight: "1.4em",
+            fontFamily: "Pretendard, sans-serif",
             cursor: myCode ? "pointer" : "default",
             opacity: myCode ? 1 : 0.4,
-            fontFamily: "Pretendard, sans-serif",
           }}
         >
           카카오톡 공유

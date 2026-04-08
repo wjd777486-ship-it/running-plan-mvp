@@ -303,12 +303,14 @@ function ValidationDisplay({
   const aiTimeDisplay = aiTime ? formatTimeDisplay(aiTime) : null;
   const [selectedPlan, setSelectedPlan] = useState<"my" | "ai">("my");
 
-  const titleText = isGreen
-    ? "러너님이 충분히\n달성할 수 있는 목표예요"
-    : "러너님에게 지금은\n어려운 목표예요";
-  const subText = isGreen
-    ? "AI 러닝 코치가 훈련 계획을 짜줄게요."
-    : "AI 러닝 코치가 목표를 추천해드릴게요.";
+  const isHardGoal = !isGreen && !!aiTimeDisplay;
+
+  const titleText = isHardGoal
+    ? "러너님에게 지금은\n어려운 목표예요"
+    : "러너님이 충분히\n달성할 수 있는 목표예요";
+  const subText = isHardGoal
+    ? "AI 러닝 코치가 목표를 추천해드릴게요."
+    : "AI 러닝 코치가 훈련 계획을 짜줄게요.";
 
   const myCardSelected = isGreen || selectedPlan === "my";
 
@@ -589,7 +591,7 @@ export default function OnboardingPage() {
     }
 
     try {
-      const genRes = await fetch("/api/generate", {
+      const genRes = await fetch("/api/generate-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formData, validation: validationResult, useAiGoal }),
@@ -613,11 +615,9 @@ export default function OnboardingPage() {
         }
       }
 
-      const jsonStart = fullText.indexOf("{");
-      const jsonEnd = fullText.lastIndexOf("}");
-      if (jsonStart === -1 || jsonEnd === -1) throw new Error("플랜 응답에서 JSON을 찾을 수 없어요. 다시 시도해주세요.");
-      const cleaned = fullText.slice(jsonStart, jsonEnd + 1);
-      const generatedPlan: GeneratedPlan = JSON.parse(cleaned);
+      const planMarker = "__PLAN_WITH_DATES__:";
+      if (!fullText.includes(planMarker)) throw new Error("플랜 응답에서 날짜 배정 데이터를 찾을 수 없어요. 다시 시도해주세요.");
+      const generatedPlan: GeneratedPlan = JSON.parse(fullText.split(planMarker)[1]);
       setGeneratingWeeks(generatedPlan.plan_summary.total_weeks);
       const userId = getOrCreateAnonymousUserId();
       const result = await createPlan(form, generatedPlan, userId);

@@ -277,7 +277,21 @@ export async function POST(request: Request) {
   const today = new Date().toISOString().split("T")[0];
   console.log("[/api/generate] 입력값:", JSON.stringify(body.formData, null, 2));
   console.log("[/api/generate] today:", today);
-  const systemPrompt = GENERATE_PROMPT.replace("{today}", today);
+  const systemPrompt = GENERATE_PROMPT.replaceAll("{today}", today);
+
+  // 훈련 가능 날짜 목록 계산
+  const DAY_NUM: Record<string, number> = { sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6 };
+  const allowedDows = new Set(body.formData.trainingDays.map(d => DAY_NUM[d]));
+  const allowedDates: string[] = [];
+  const cursor = new Date(today + "T00:00:00");
+  const raceEnd = new Date(body.formData.raceDate + "T00:00:00");
+  while (cursor <= raceEnd) {
+    if (allowedDows.has(cursor.getDay())) {
+      allowedDates.push(cursor.toISOString().split("T")[0]);
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  console.log("[/api/generate] 허용 날짜 수:", allowedDates.length);
 
   const useAiGoal = body.useAiGoal ?? false;
   const { goalHours, goalMinutes } = body.formData;
@@ -380,6 +394,13 @@ Tempo 페이스: ${toMinSec(paces.tempo)}
 인터벌 후반 페이스: ${toMinSec(intervalLate)}
 `;
 
+  const allowedDatesSection = `\n\n[훈련 가능 날짜 목록 — 반드시 이 날짜에만 훈련 세션을 배치할 것. 목록에 없는 날짜는 무조건 rest]\n${allowedDates.join(", ")}`;
+
+  const userMessage = `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}\n\n현재 VDOT: ${body.validation.validation.vdot.estimated_current} (이 값을 그대로 사용할 것. 재계산 금지)${calculatedPaces}${allowedDatesSection}`;
+
+  console.log("[/api/generate] ===== SYSTEM PROMPT =====\n" + systemPrompt);
+  console.log("[/api/generate] ===== USER MESSAGE =====\n" + userMessage);
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -391,7 +412,7 @@ Tempo 페이스: ${toMinSec(paces.tempo)}
           messages: [
             {
               role: "user",
-              content: `다음 러너의 정보와 검증 결과를 바탕으로 전체 훈련 플랜을 생성해줘:\n\n${formatRunnerData(body.formData)}\n\n${validationSummary}\n\n현재 VDOT: ${body.validation.validation.vdot.estimated_current} (이 값을 그대로 사용할 것. 재계산 금지)${calculatedPaces}`,
+              content: userMessage,
             },
           ],
           system: systemPrompt,

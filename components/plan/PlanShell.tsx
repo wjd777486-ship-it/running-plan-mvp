@@ -107,10 +107,35 @@ function InviteCodeSection() {
           {loading ? "생성 중..." : myCode ? myCode : "초대코드 받기"}
         </button>
 
-        {/* 카카오톡 공유 버튼 (UI만, 기능 미구현) */}
+        {/* 카카오톡 공유 버튼 */}
         <button
           type="button"
-          disabled
+          onClick={() => {
+            if (!myCode) return;
+            const kakao = (window as unknown as { Kakao?: { Share?: { sendDefault: (opts: unknown) => void } } }).Kakao;
+            if (!kakao?.Share) return;
+            kakao.Share.sendDefault({
+              objectType: "feed",
+              content: {
+                title: "AI 러닝 훈련 짜기 초대코드",
+                description: `초대코드: ${myCode}`,
+                link: {
+                  mobileWebUrl: "https://running-plan-mvp.vercel.app",
+                  webUrl: "https://running-plan-mvp.vercel.app",
+                },
+              },
+              buttons: [
+                {
+                  title: "훈련 플랜 받기",
+                  link: {
+                    mobileWebUrl: "https://running-plan-mvp.vercel.app",
+                    webUrl: "https://running-plan-mvp.vercel.app",
+                  },
+                },
+              ],
+            });
+          }}
+          disabled={!myCode}
           style={{
             width: "100%",
             height: 52,
@@ -121,8 +146,8 @@ function InviteCodeSection() {
             fontWeight: 600,
             fontSize: 16,
             lineHeight: "1.4em",
-            cursor: "default",
-            opacity: 0.4,
+            cursor: myCode ? "pointer" : "default",
+            opacity: myCode ? 1 : 0.4,
             fontFamily: "Pretendard, sans-serif",
           }}
         >

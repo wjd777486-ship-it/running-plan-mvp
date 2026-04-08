@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, CalendarDays } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -511,6 +511,12 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  // 초대코드 게이트: localStorage에 없으면 /invite로 리다이렉트
+  useEffect(() => {
+    const code = localStorage.getItem("invite_code");
+    if (!code) router.replace("/invite");
+  }, [router]);
+
   function setField<K extends keyof RunnerFormData>(key: K, value: RunnerFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -622,6 +628,17 @@ export default function OnboardingPage() {
       const userId = getOrCreateAnonymousUserId();
       const result = await createPlan(form, generatedPlan, userId);
       if ("error" in result) throw new Error(result.error);
+
+      // 초대코드 사용 처리 (fire-and-forget)
+      const inviteCode = localStorage.getItem("invite_code");
+      if (inviteCode) {
+        fetch("/api/invite/use", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: inviteCode, sessionId: userId }),
+        }).catch(() => {});
+      }
+
       router.push(`/plan?id=${result.planId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");

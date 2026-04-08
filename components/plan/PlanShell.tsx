@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { GeneratedPlan, TrainingDay, WorkoutType, Phase } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -9,6 +9,150 @@ import MonthNav from "./MonthNav";
 import CalendarGrid from "./CalendarGrid";
 import WorkoutDetailPanel from "./WorkoutDetailPanel";
 import WorkoutTypeLegend from "./WorkoutTypeLegend";
+import { getOrCreateAnonymousUserId } from "@/lib/anonymous-user";
+
+function InviteCodeSection() {
+  const [myCode, setMyCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState(false);
+
+  const showSnackbar = useCallback(() => {
+    setSnackbar(true);
+    setTimeout(() => setSnackbar(false), 2500);
+  }, []);
+
+  async function handleGetCode() {
+    if (myCode) {
+      navigator.clipboard.writeText(myCode).catch(() => {});
+      showSnackbar();
+      return;
+    }
+    setLoading(true);
+    try {
+      const sessionId = getOrCreateAnonymousUserId();
+      const res = await fetch("/api/invite/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json();
+      if (data.code) {
+        setMyCode(data.code);
+        navigator.clipboard.writeText(data.code).catch(() => {});
+        showSnackbar();
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 24,
+        borderTop: "1px solid rgba(60,60,67,0.12)",
+        paddingTop: 24,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <p
+        style={{
+          fontWeight: 600,
+          fontSize: 17,
+          lineHeight: "1.45em",
+          letterSpacing: "-0.0254em",
+          color: "#0A0A0A",
+          margin: 0,
+        }}
+      >
+        내 주변 러너에게도 알려주세요
+      </p>
+
+      <p
+        style={{
+          fontSize: 13,
+          lineHeight: "1.6em",
+          color: "#4A5565",
+          margin: 0,
+          whiteSpace: "pre-line",
+        }}
+      >
+        {"[초대코드 받기] 버튼 클릭\n[카카오톡 공유] 버튼 클릭\n복사한 초대코드 붙여넣기\n* 초대코드 1개당 1회 이용할 수 있어요."}
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <button
+          type="button"
+          onClick={handleGetCode}
+          disabled={loading}
+          style={{
+            width: "100%",
+            height: 52,
+            borderRadius: 12,
+            border: "none",
+            backgroundColor: "#0088FF",
+            color: "#FFFFFF",
+            fontWeight: 600,
+            fontSize: 16,
+            lineHeight: "1.4em",
+            cursor: loading ? "default" : "pointer",
+            opacity: loading ? 0.6 : 1,
+            fontFamily: "Pretendard, sans-serif",
+          }}
+        >
+          {loading ? "생성 중..." : myCode ? myCode : "초대코드 받기"}
+        </button>
+
+        {/* 카카오톡 공유 버튼 (UI만, 기능 미구현) */}
+        <button
+          type="button"
+          disabled
+          style={{
+            width: "100%",
+            height: 52,
+            borderRadius: 12,
+            border: "1px solid rgba(60,60,67,0.29)",
+            backgroundColor: "#FFFFFF",
+            color: "#0A0A0A",
+            fontWeight: 600,
+            fontSize: 16,
+            lineHeight: "1.4em",
+            cursor: "default",
+            opacity: 0.4,
+            fontFamily: "Pretendard, sans-serif",
+          }}
+        >
+          카카오톡 공유
+        </button>
+      </div>
+
+      {snackbar && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#0A0A0A",
+            color: "#FFFFFF",
+            borderRadius: 12,
+            padding: "12px 20px",
+            fontSize: 14,
+            fontWeight: 500,
+            whiteSpace: "nowrap",
+            zIndex: 100,
+          }}
+        >
+          초대코드를 복사했어요.
+        </div>
+      )}
+    </div>
+  );
+}
 
 function toDateStr(date: Date): string {
   const y = date.getFullYear();
@@ -324,6 +468,9 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
             selectedDateStr={selectedDay}
           />
         </div>
+
+        {/* 초대코드 공유 섹션 */}
+        <InviteCodeSection />
       </div>
 
       {/* Calendar bottom sheet */}

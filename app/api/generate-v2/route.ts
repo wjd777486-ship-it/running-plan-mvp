@@ -228,7 +228,7 @@ interface V2Session {
   sets: GeneratedDay["sets"];
   warmup: GeneratedDay["warmup"];
   cooldown: GeneratedDay["cooldown"];
-  tempo_segment: GeneratedDay["tempoSegment"];
+  tempo_segment: GeneratedDay["tempo_segment"];
   description: string;
 }
 

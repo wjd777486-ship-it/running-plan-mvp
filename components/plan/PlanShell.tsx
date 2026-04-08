@@ -333,11 +333,15 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
     });
 
     if (isCompleted) {
-      supabase.from("completions").delete().eq("plan_id", planId).eq("date", dateStr)
-        .then(({ error }) => { if (error) console.error("[completions] delete error:", error); });
+      (async () => {
+        const { error } = await supabase.from("completions").delete().eq("plan_id", planId).eq("date", dateStr);
+        if (error) console.error("[completions] delete error:", error);
+      })();
     } else {
-      supabase.from("completions").insert({ plan_id: planId, date: dateStr })
-        .then(({ error }) => { if (error) console.error("[completions] insert error:", error); });
+      (async () => {
+        const { error } = await supabase.from("completions").insert({ plan_id: planId, date: dateStr });
+        if (error) console.error("[completions] insert error:", error);
+      })();
     }
   }
 

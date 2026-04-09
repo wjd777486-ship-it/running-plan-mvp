@@ -498,7 +498,7 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
           <div
             style={{
               position: "absolute",
-              top: "calc(100% + 4px)",
+              top: "100%",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",

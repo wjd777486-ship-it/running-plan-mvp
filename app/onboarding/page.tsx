@@ -598,6 +598,35 @@ export default function OnboardingPage() {
 
   async function handleValidate() {
     isProcessingRef.current = true;
+
+    // 초대코드 use_count 체크 및 차감 (validate API도 비용 발생)
+    const inviteCode = localStorage.getItem("invite_code");
+    const sessionId = getOrCreateAnonymousUserId();
+    if (inviteCode) {
+      try {
+        const validateRes = await fetch("/api/invite/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: inviteCode }),
+        });
+        const validateData = await validateRes.json();
+        if (!validateData.valid) {
+          showToast(validateData.reason === "exhausted"
+            ? "이미 3회 사용한 초대코드예요."
+            : "유효하지 않은 초대코드예요.");
+          isProcessingRef.current = false;
+          return;
+        }
+        await fetch("/api/invite/use", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: inviteCode, sessionId }),
+        });
+      } catch {
+        // 네트워크 오류 시 계속 진행
+      }
+    }
+
     setAppStep("validating");
     try {
       const res = await fetch("/api/validate", {
@@ -619,36 +648,9 @@ export default function OnboardingPage() {
   async function handleGenerate(useAiGoal: boolean) {
     if (!validationResult) return;
 
-    // 초대코드 use_count 체크 및 차감
-    const inviteCode = localStorage.getItem("invite_code");
-    const sessionId = getOrCreateAnonymousUserId();
-    if (inviteCode) {
-      try {
-        const validateRes = await fetch("/api/invite/validate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: inviteCode }),
-        });
-        const validateData = await validateRes.json();
-        if (!validateData.valid) {
-          showToast(validateData.reason === "exhausted"
-            ? "이미 3회 사용한 초대코드예요."
-            : "유효하지 않은 초대코드예요.");
-          return;
-        }
-        await fetch("/api/invite/use", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: inviteCode, sessionId }),
-        });
-      } catch {
-        // 네트워크 오류 시 생성 계속 진행
-      }
-    }
-
+    setError(null);
     setGeneratingWeeks(validationResult.validation.training_period.total_weeks);
     setAppStep("generating");
-    setError(null);
 
     let formData = form;
     if (useAiGoal && validationResult.validation.realistic_goal.suggested_time) {

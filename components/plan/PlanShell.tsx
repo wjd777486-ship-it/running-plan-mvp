@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { GeneratedPlan, TrainingDay, WorkoutType, Phase } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
-import { ChevronLeftIcon, ChevronRightIcon, CopyIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, BookmarkIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import PlanHeader from "./PlanHeader";
 import MonthNav from "./MonthNav";
 import CalendarGrid from "./CalendarGrid";
@@ -205,14 +206,17 @@ function InviteCodeSection() {
             bottom: 32,
             left: "50%",
             transform: "translateX(-50%)",
-            backgroundColor: "#0A0A0A",
+            backgroundColor: "#222324",
             color: "#FFFFFF",
-            borderRadius: 12,
-            padding: "12px 20px",
+            borderRadius: 999,
+            padding: "14px 24px",
+            width: 320,
+            textAlign: "center",
             fontSize: 14,
             fontWeight: 500,
-            whiteSpace: "nowrap",
+            boxShadow: "0px 4px 10px 0px rgba(11, 12, 12, 0.16)",
             zIndex: 100,
+            boxSizing: "border-box",
           }}
         >
           초대코드를 복사했어요.
@@ -291,6 +295,7 @@ interface PlanShellProps {
 }
 
 export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
+  const router = useRouter();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = toDateStr(today);
@@ -300,6 +305,18 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
 
   const [selectedDay, setSelectedDay] = useState<string>(todayStr);
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
+  const [urlSnackbar, setUrlSnackbar] = useState(false);
+
+  const handleCopyUrl = useCallback(() => {
+    navigator.clipboard.writeText(window.location.href).catch(() => {});
+    setUrlSnackbar(true);
+    setTimeout(() => setUrlSnackbar(false), 2500);
+  }, []);
+
+  function handleRetrain() {
+    localStorage.removeItem("plan_id");
+    router.push("/invite");
+  }
 
   // Calendar bottom sheet state
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -444,9 +461,34 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
 
   return (
     <main className="min-h-screen bg-white">
+      {/* Nav header */}
+      <header
+        style={{
+          width: 320,
+          margin: "0 auto",
+          height: 59,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 0",
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontWeight: 500, fontSize: 18, lineHeight: "1.4em", color: "#0A0A0A" }}>
+          뛰뛰빵빵
+        </span>
+        <button
+          type="button"
+          onClick={handleCopyUrl}
+          style={{ background: "none", border: "none", padding: 4, cursor: "pointer", display: "flex", alignItems: "center" }}
+        >
+          <BookmarkIcon size={24} color="#0A0A0A" strokeWidth={1.5} />
+        </button>
+      </header>
+
       <div className="mx-auto w-[320px] pb-8">
         {/* Plan header: title + stats card */}
-        <div style={{ paddingTop: 24 }}>
+        <div style={{ paddingTop: 8 }}>
           <PlanHeader
             summary={generatedPlan.plan_summary}
             dayMap={dayMap}
@@ -546,7 +588,54 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
 
         {/* 초대코드 공유 섹션 */}
         <InviteCodeSection />
+
+        {/* 훈련 다시 짜기 */}
+        <button
+          type="button"
+          onClick={handleRetrain}
+          style={{
+            width: "100%",
+            padding: "10px 0",
+            background: "none",
+            border: "none",
+            fontFamily: "Pretendard, sans-serif",
+            fontWeight: 500,
+            fontSize: 16,
+            lineHeight: "1.45em",
+            letterSpacing: "-0.0068em",
+            color: "#364153",
+            cursor: "pointer",
+            textAlign: "center",
+          }}
+        >
+          훈련 다시 짜기
+        </button>
       </div>
+
+      {/* URL 복사 토스트 */}
+      {urlSnackbar && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#222324",
+            color: "#FFFFFF",
+            borderRadius: 999,
+            padding: "14px 24px",
+            width: 320,
+            textAlign: "center",
+            fontSize: 14,
+            fontWeight: 500,
+            boxShadow: "0px 4px 10px 0px rgba(11, 12, 12, 0.16)",
+            zIndex: 100,
+            boxSizing: "border-box",
+          }}
+        >
+          훈련 플랜 링크를 복사했어요.
+        </div>
+      )}
 
       {/* Calendar bottom sheet */}
       {calendarOpen && (

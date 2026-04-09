@@ -501,6 +501,7 @@ export default function OnboardingPage() {
   const [generatingWeeks, setGeneratingWeeks] = useState(0);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [step1Errors, setStep1Errors] = useState<{ raceDate?: string; raceType?: string; goalTime?: string }>({});
   const [step2Errors, setStep2Errors] = useState<{ age?: string }>({});
@@ -595,6 +596,8 @@ export default function OnboardingPage() {
   }
 
   async function handleValidate() {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     // 초대코드 use_count 체크 및 차감 (validate API도 비용 발생)
     const inviteCode = localStorage.getItem("invite_code");
     const sessionId = getOrCreateAnonymousUserId();
@@ -636,6 +639,7 @@ export default function OnboardingPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
       setAppStep("form");
+      setIsSubmitting(false);
     }
   }
 
@@ -1205,7 +1209,8 @@ export default function OnboardingPage() {
         <button
           type="button"
           onClick={handleNext}
-          className="w-[320px] bg-[#0088FF] text-white rounded-xl font-semibold active:opacity-90 transition-opacity"
+          disabled={formStep === 3 && isSubmitting}
+          className="w-[320px] bg-[#0088FF] text-white rounded-xl font-semibold active:opacity-90 transition-opacity disabled:opacity-50"
           style={{ paddingTop: 16, paddingBottom: 16, paddingLeft: 24, paddingRight: 24, fontSize: 18, lineHeight: "1.40", borderRadius: 12 }}
         >
           다음

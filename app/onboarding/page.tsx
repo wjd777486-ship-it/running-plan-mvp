@@ -503,6 +503,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [step1Errors, setStep1Errors] = useState<{ raceDate?: string; raceType?: string; goalTime?: string }>({});
+  const [step2Errors, setStep2Errors] = useState<{ age?: string }>({});
 
   function showToast(msg: string) {
     setToast(msg);
@@ -567,6 +568,13 @@ export default function OnboardingPage() {
       if (form.goalHours === 0 && form.goalMinutes === 0) errors.goalTime = "목표 기록을 입력해 주세요.";
       if (Object.keys(errors).length > 0) { setStep1Errors(errors); return; }
       setStep1Errors({});
+    }
+
+    if (formStep === 2) {
+      const errors: typeof step2Errors = {};
+      if (form.age === 0) errors.age = "나이를 입력해 주세요.";
+      if (Object.keys(errors).length > 0) { setStep2Errors(errors); return; }
+      setStep2Errors({});
     }
 
     if (formStep < 3) {
@@ -950,12 +958,15 @@ export default function OnboardingPage() {
               <div className="flex items-center gap-[6px]">
                 <NumBox
                   value={form.age}
-                  onChange={(v) => setField("age", v)}
+                  onChange={(v) => { setField("age", v); setStep2Errors((e) => ({ ...e, age: undefined })); }}
                   min={10}
                   max={99}
                 />
                 <span className="font-medium text-black" style={{ fontSize: 16, lineHeight: "1.45" }}>세</span>
               </div>
+              {step2Errors.age && (
+                <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step2Errors.age}</p>
+              )}
             </div>
 
             {/* 러닝 경력: gap 6px */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, CalendarDays } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -498,7 +498,6 @@ export default function OnboardingPage() {
   const [form, setForm] = useState<RunnerFormData>(INITIAL_FORM);
   const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
   const [appStep, setAppStep] = useState<"form" | "validating" | "result" | "generating">("form");
-  const isProcessingRef = useRef(false);
   const [generatingWeeks, setGeneratingWeeks] = useState(0);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -561,7 +560,6 @@ export default function OnboardingPage() {
   }
 
   function handleNext() {
-    if (isProcessingRef.current) { showToast("AI가 훈련 계획을 분석 중이에요."); return; }
     setError(null);
 
     if (formStep === 1) {
@@ -597,8 +595,6 @@ export default function OnboardingPage() {
   }
 
   async function handleValidate() {
-    isProcessingRef.current = true;
-
     // 초대코드 use_count 체크 및 차감 (validate API도 비용 발생)
     const inviteCode = localStorage.getItem("invite_code");
     const sessionId = getOrCreateAnonymousUserId();
@@ -614,7 +610,6 @@ export default function OnboardingPage() {
           showToast(validateData.reason === "exhausted"
             ? "이미 3회 사용한 초대코드예요."
             : "유효하지 않은 초대코드예요.");
-          isProcessingRef.current = false;
           return;
         }
         await fetch("/api/invite/use", {
@@ -641,7 +636,6 @@ export default function OnboardingPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
       setAppStep("form");
-      isProcessingRef.current = false;
     }
   }
 

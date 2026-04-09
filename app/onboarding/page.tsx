@@ -560,6 +560,7 @@ export default function OnboardingPage() {
   }
 
   function handleNext() {
+    if (appStep !== "form") { showToast("AI가 훈련 계획을 분석 중이에요."); return; }
     setError(null);
 
     if (formStep === 1) {

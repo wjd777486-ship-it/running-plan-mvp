@@ -510,6 +510,7 @@ export default function OnboardingPage() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [step1Errors, setStep1Errors] = useState<{ raceDate?: string; raceType?: string; goalTime?: string }>({});
 
   function showToast(msg: string) {
     setToast(msg);
@@ -566,6 +567,16 @@ export default function OnboardingPage() {
 
   function handleNext() {
     setError(null);
+
+    if (formStep === 1) {
+      const errors: typeof step1Errors = {};
+      if (!form.raceDate) errors.raceDate = "대회 일시를 입력해 주세요.";
+      if (!form.raceType) errors.raceType = "참가 코스를 입력해 주세요.";
+      if (form.goalHours === 0 && form.goalMinutes === 0) errors.goalTime = "목표 기록을 입력해 주세요.";
+      if (Object.keys(errors).length > 0) { setStep1Errors(errors); return; }
+      setStep1Errors({});
+    }
+
     if (formStep < 3) {
       setFormStep((s) => (s + 1) as 1 | 2 | 3);
     } else {
@@ -791,6 +802,7 @@ export default function OnboardingPage() {
             <div>
               <FieldLabel label="대회 일시" />
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+
                 <PopoverTrigger
                   className="border border-[rgba(60,60,67,0.29)] rounded-[18px] flex items-center justify-between cursor-pointer"
                   style={{ width: 272, height: 52, paddingLeft: 16, paddingRight: 16 }}
@@ -828,6 +840,9 @@ export default function OnboardingPage() {
                   />
                 </PopoverContent>
               </Popover>
+              {step1Errors.raceDate && (
+                <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step1Errors.raceDate}</p>
+              )}
             </div>
 
             {/* 참가 코스: chip size=s, gap 8px */}
@@ -845,6 +860,9 @@ export default function OnboardingPage() {
                   />
                 ))}
               </div>
+              {step1Errors.raceType && (
+                <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step1Errors.raceType}</p>
+              )}
             </div>
 
             {/* 목표 기록: gap 6px between all items */}
@@ -866,6 +884,9 @@ export default function OnboardingPage() {
                 />
                 <span className="font-medium text-black" style={{ fontSize: 16, lineHeight: "1.45" }}>분</span>
               </div>
+              {step1Errors.goalTime && (
+                <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step1Errors.goalTime}</p>
+              )}
             </div>
 
             {/* PB: 코스명 파란색 레이블, gap 6px between all items */}

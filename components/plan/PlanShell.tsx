@@ -477,23 +477,45 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
         <span style={{ fontWeight: 500, fontSize: 18, lineHeight: "1.4em", color: "#0A0A0A" }}>
           뛰뛰빵빵
         </span>
-        <button
-          type="button"
-          onClick={handleCopyUrl}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 4,
-            cursor: "pointer",
-            fontFamily: "Pretendard, sans-serif",
-            fontWeight: 600,
-            fontSize: 14,
-            lineHeight: "145%",
-            color: "#000000",
-          }}
-        >
-          훈련 저장
-        </button>
+        <div style={{ position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={handleCopyUrl}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 4,
+              cursor: "pointer",
+              fontFamily: "Pretendard, sans-serif",
+              fontWeight: 600,
+              fontSize: 14,
+              lineHeight: "145%",
+              color: "#000000",
+            }}
+          >
+            훈련 저장
+          </button>
+          <span
+            style={{
+              position: "absolute",
+              top: "100%",
+              display: "flex",
+              padding: "4px 8px",
+              justifyContent: "center",
+              alignItems: "center",
+              borderRadius: 16,
+              background: "#282F5A",
+              color: "#FFF",
+              fontFamily: "Pretendard, sans-serif",
+              fontSize: 13,
+              fontWeight: 500,
+              lineHeight: "135%",
+              whiteSpace: "nowrap",
+            }}
+          >
+            훈련 링크 복사
+          </span>
+        </div>
       </header>
 
       <div className="mx-auto w-[320px] pb-8">

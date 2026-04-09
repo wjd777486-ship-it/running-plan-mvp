@@ -315,7 +315,7 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
 
   function handleRetrain() {
     localStorage.removeItem("plan_id");
-    router.push("/invite");
+    router.push("/onboarding");
   }
 
   // Calendar bottom sheet state

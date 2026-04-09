@@ -509,6 +509,12 @@ export default function OnboardingPage() {
   const [generatingWeeks, setGeneratingWeeks] = useState(0);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // 초대코드 게이트: localStorage에 없으면 /invite로 리다이렉트
@@ -587,6 +593,34 @@ export default function OnboardingPage() {
 
   async function handleGenerate(useAiGoal: boolean) {
     if (!validationResult) return;
+
+    // 초대코드 use_count 체크 및 차감
+    const inviteCode = localStorage.getItem("invite_code");
+    const sessionId = getOrCreateAnonymousUserId();
+    if (inviteCode) {
+      try {
+        const validateRes = await fetch("/api/invite/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: inviteCode }),
+        });
+        const validateData = await validateRes.json();
+        if (!validateData.valid) {
+          showToast(validateData.reason === "exhausted"
+            ? "이미 3회 사용한 초대코드예요."
+            : "유효하지 않은 초대코드예요.");
+          return;
+        }
+        await fetch("/api/invite/use", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: inviteCode, sessionId }),
+        });
+      } catch {
+        // 네트워크 오류 시 생성 계속 진행
+      }
+    }
+
     setGeneratingWeeks(validationResult.validation.training_period.total_weeks);
     setAppStep("generating");
     setError(null);
@@ -710,6 +744,7 @@ export default function OnboardingPage() {
 
   // ── Form screen ─────────────────────────────────────────────────────────────
   return (
+    <>
     <main className="flex flex-col min-h-screen max-w-[320px] mx-auto bg-white">
 
       {/* Header: h:59px, px:20px, py:12px */}
@@ -1135,5 +1170,31 @@ export default function OnboardingPage() {
       </div>
 
     </main>
+
+    {/* 초대코드 토스트 */}
+    {toast && (
+      <div
+        style={{
+          position: "fixed",
+          bottom: 32,
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "#222324",
+          color: "#FFFFFF",
+          borderRadius: 999,
+          padding: "14px 24px",
+          width: 320,
+          textAlign: "center",
+          fontSize: 14,
+          fontWeight: 500,
+          boxShadow: "0px 4px 10px 0px rgba(11, 12, 12, 0.16)",
+          zIndex: 100,
+          boxSizing: "border-box" as const,
+        }}
+      >
+        {toast}
+      </div>
+    )}
+    </>
   );
 }

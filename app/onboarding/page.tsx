@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, CalendarDays } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -498,6 +498,7 @@ export default function OnboardingPage() {
   const [form, setForm] = useState<RunnerFormData>(INITIAL_FORM);
   const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
   const [appStep, setAppStep] = useState<"form" | "validating" | "result" | "generating">("form");
+  const isProcessingRef = useRef(false);
   const [generatingWeeks, setGeneratingWeeks] = useState(0);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -560,7 +561,7 @@ export default function OnboardingPage() {
   }
 
   function handleNext() {
-    if (appStep !== "form") { showToast("AI가 훈련 계획을 분석 중이에요."); return; }
+    if (isProcessingRef.current) { showToast("AI가 훈련 계획을 분석 중이에요."); return; }
     setError(null);
 
     if (formStep === 1) {
@@ -596,6 +597,7 @@ export default function OnboardingPage() {
   }
 
   async function handleValidate() {
+    isProcessingRef.current = true;
     setAppStep("validating");
     try {
       const res = await fetch("/api/validate", {
@@ -610,6 +612,7 @@ export default function OnboardingPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
       setAppStep("form");
+      isProcessingRef.current = false;
     }
   }
 

@@ -12,7 +12,8 @@ export default function InvitePage() {
 
   useEffect(() => {
     const saved = localStorage.getItem("invite_code");
-    if (saved) {
+    const planId = localStorage.getItem("plan_id");
+    if (saved && !planId) {
       router.replace("/onboarding");
     } else {
       setChecking(false);

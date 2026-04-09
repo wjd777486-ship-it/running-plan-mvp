@@ -596,30 +596,44 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
           />
         </div>
 
-        {/* 초대코드 공유 섹션 */}
-        <InviteCodeSection />
+        {/* 초대코드 공유 + 훈련 다시 짜기 */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 30 }}>
+          <InviteCodeSection />
 
-        {/* 훈련 다시 짜기 */}
-        <button
-          type="button"
-          onClick={handleRetrain}
-          style={{
-            width: "100%",
-            padding: "10px 0",
-            background: "none",
-            border: "none",
-            fontFamily: "Pretendard, sans-serif",
-            fontWeight: 500,
-            fontSize: 16,
-            lineHeight: "1.45em",
-            letterSpacing: "-0.0068em",
-            color: "#364153",
-            cursor: "pointer",
-            textAlign: "center",
-          }}
-        >
-          훈련 다시 짜기
-        </button>
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              padding: "10px 0",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleRetrain}
+              style={{
+                background: "none",
+                border: "none",
+                fontFamily: "Pretendard, sans-serif",
+                fontWeight: 500,
+                fontSize: 16,
+                lineHeight: "145%",
+                letterSpacing: "-0.109px",
+                color: "#364153",
+                cursor: "pointer",
+                textAlign: "center",
+                textDecorationLine: "underline",
+                textDecorationStyle: "solid",
+                textDecorationSkipInk: "auto",
+                textUnderlineOffset: "auto",
+              }}
+            >
+              훈련 다시 짜기
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* URL 복사 토스트 */}

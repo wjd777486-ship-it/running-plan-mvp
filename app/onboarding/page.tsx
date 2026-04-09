@@ -632,15 +632,6 @@ export default function OnboardingPage() {
       const result = await createPlan(form, generatedPlan, userId);
       if ("error" in result) throw new Error(result.error);
 
-      // 초대코드 사용 처리 (fire-and-forget)
-      const inviteCode = localStorage.getItem("invite_code");
-      if (inviteCode) {
-        fetch("/api/invite/use", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: inviteCode, sessionId: userId }),
-        }).catch(() => {});
-      }
 
       localStorage.setItem("plan_id", result.planId);
       router.push(`/plan?id=${result.planId}`);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getOrCreateAnonymousUserId } from "@/lib/anonymous-user";
 
 export default function InvitePage() {
   const router = useRouter();
@@ -33,6 +34,12 @@ export default function InvitePage() {
       });
       const data = await res.json();
       if (data.valid) {
+        // 입장 시점에 use_count 증가
+        await fetch("/api/invite/use", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: trimmed, sessionId: getOrCreateAnonymousUserId() }),
+        });
         localStorage.setItem("invite_code", trimmed);
         router.push("/onboarding");
       } else if (data.reason === "exhausted") {

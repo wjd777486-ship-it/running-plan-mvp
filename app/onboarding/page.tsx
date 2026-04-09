@@ -504,6 +504,7 @@ export default function OnboardingPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [step1Errors, setStep1Errors] = useState<{ raceDate?: string; raceType?: string; goalTime?: string }>({});
   const [step2Errors, setStep2Errors] = useState<{ age?: string }>({});
+  const [step3Errors, setStep3Errors] = useState<{ trainingDays?: string; joggingHr?: string; runningHr?: string }>({});
 
   function showToast(msg: string) {
     setToast(msg);
@@ -575,6 +576,15 @@ export default function OnboardingPage() {
       if (form.age === 0) errors.age = "나이를 입력해 주세요.";
       if (Object.keys(errors).length > 0) { setStep2Errors(errors); return; }
       setStep2Errors({});
+    }
+
+    if (formStep === 3) {
+      const errors: typeof step3Errors = {};
+      if (form.trainingDays.length === 0) errors.trainingDays = "훈련 가능 요일을 입력해 주세요.";
+      if (form.joggingHr === 0) errors.joggingHr = "조깅 심박을 입력해 주세요.";
+      if (form.runningHr === 0) errors.runningHr = "러닝 심박을 입력해 주세요.";
+      if (Object.keys(errors).length > 0) { setStep3Errors(errors); return; }
+      setStep3Errors({});
     }
 
     if (formStep < 3) {
@@ -1061,7 +1071,7 @@ export default function OnboardingPage() {
                       <button
                         key={d.value}
                         type="button"
-                        onClick={() => toggleDay(d.value)}
+                        onClick={() => { toggleDay(d.value); setStep3Errors((e) => ({ ...e, trainingDays: undefined })); }}
                         className={cn(
                           "flex-1 rounded-full border font-semibold transition-colors py-1.5 text-[14px]",
                           form.trainingDays.includes(d.value)
@@ -1073,6 +1083,9 @@ export default function OnboardingPage() {
                       </button>
                     ))}
                   </div>
+                  {step3Errors.trainingDays && (
+                    <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step3Errors.trainingDays}</p>
+                  )}
                 </div>
 
               </div>
@@ -1104,9 +1117,12 @@ export default function OnboardingPage() {
                 <div>
                   <FieldLabel label="심박" sub="(bpm)" />
                   <div className="flex items-center gap-[6px]">
-                    <NumBox value={form.joggingHr} onChange={(v) => setField("joggingHr", v)} min={60} max={200} wide />
+                    <NumBox value={form.joggingHr} onChange={(v) => { setField("joggingHr", v); setStep3Errors((e) => ({ ...e, joggingHr: undefined })); }} min={60} max={200} wide />
                     <span className="font-medium text-black" style={{ fontSize: 16, lineHeight: "1.45" }}>bpm</span>
                   </div>
+                  {step3Errors.joggingHr && (
+                    <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step3Errors.joggingHr}</p>
+                  )}
                 </div>
 
                 <div>
@@ -1152,9 +1168,12 @@ export default function OnboardingPage() {
                 <div>
                   <FieldLabel label="심박" sub="(bpm)" />
                   <div className="flex items-center gap-[6px]">
-                    <NumBox value={form.runningHr} onChange={(v) => setField("runningHr", v)} min={60} max={220} wide />
+                    <NumBox value={form.runningHr} onChange={(v) => { setField("runningHr", v); setStep3Errors((e) => ({ ...e, runningHr: undefined })); }} min={60} max={220} wide />
                     <span className="font-medium text-black" style={{ fontSize: 16, lineHeight: "1.45" }}>bpm</span>
                   </div>
+                  {step3Errors.runningHr && (
+                    <p style={{ fontSize: 13, color: "#FC6C6C", marginTop: 4 }}>{step3Errors.runningHr}</p>
+                  )}
                 </div>
 
                 <div>

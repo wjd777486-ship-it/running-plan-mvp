@@ -29,6 +29,7 @@ export default function InvitePage() {
       const data = await res.json();
       if (data.valid) {
         localStorage.setItem("invite_code", trimmed);
+        localStorage.removeItem("plan_id");
         router.push("/onboarding");
       } else if (data.reason === "exhausted") {
         setError("이미 사용한 초대코드예요.");

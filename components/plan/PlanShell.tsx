@@ -495,26 +495,43 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
           >
             훈련 저장
           </button>
-          <span
+          <div
             style={{
               position: "absolute",
-              top: "100%",
+              top: "calc(100% + 6px)",
               display: "flex",
-              padding: "4px 8px",
-              justifyContent: "center",
+              flexDirection: "column",
               alignItems: "center",
-              borderRadius: 16,
-              background: "#282F5A",
-              color: "#FFF",
-              fontFamily: "Pretendard, sans-serif",
-              fontSize: 13,
-              fontWeight: 500,
-              lineHeight: "135%",
-              whiteSpace: "nowrap",
             }}
           >
-            훈련 링크 복사
-          </span>
+            <div
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: "5px solid transparent",
+                borderRight: "5px solid transparent",
+                borderBottom: "5px solid #282F5A",
+              }}
+            />
+            <span
+              style={{
+                display: "flex",
+                padding: "4px 8px",
+                justifyContent: "center",
+                alignItems: "center",
+                borderRadius: 16,
+                background: "#282F5A",
+                color: "#FFF",
+                fontFamily: "Pretendard, sans-serif",
+                fontSize: 13,
+                fontWeight: 500,
+                lineHeight: "135%",
+                whiteSpace: "nowrap",
+              }}
+            >
+              훈련 링크 복사
+            </span>
+          </div>
         </div>
       </header>
 

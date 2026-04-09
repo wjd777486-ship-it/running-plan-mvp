@@ -159,14 +159,6 @@ function FieldLabel({
       >
         {label}
       </span>
-      {required && (
-        <span
-          className="font-medium text-[#FC6C6C]"
-          style={{ fontSize: 15, lineHeight: "1.45" }}
-        >
-          *
-        </span>
-      )}
       {sub && (
         <span
           className="text-[#727272] ml-[2px]"

@@ -652,12 +652,14 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
             textAlign: "center",
             fontSize: 14,
             fontWeight: 500,
+            lineHeight: "1.5em",
             boxShadow: "0px 4px 10px 0px rgba(11, 12, 12, 0.16)",
             zIndex: 100,
             boxSizing: "border-box",
+            whiteSpace: "pre-line",
           }}
         >
-          훈련 플랜 링크를 복사했어요.
+          {"훈련 계획 링크 복사 완료 ✅\n링크에 저장된 훈련은 언제든 볼 수 있어요."}
         </div>
       )}
 

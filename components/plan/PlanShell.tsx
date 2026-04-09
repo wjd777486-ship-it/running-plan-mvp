@@ -480,9 +480,19 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
         <button
           type="button"
           onClick={handleCopyUrl}
-          style={{ background: "none", border: "none", padding: 4, cursor: "pointer", display: "flex", alignItems: "center" }}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 4,
+            cursor: "pointer",
+            fontFamily: "Pretendard, sans-serif",
+            fontWeight: 600,
+            fontSize: 14,
+            lineHeight: "145%",
+            color: "#000000",
+          }}
         >
-          <BookmarkIcon size={24} color="#0A0A0A" strokeWidth={1.5} />
+          훈련 저장
         </button>
       </header>
 

@@ -11,14 +11,8 @@ export default function InvitePage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem("invite_code");
-    const planId = localStorage.getItem("plan_id");
-    if (saved && !planId) {
-      router.replace("/onboarding");
-    } else {
-      setChecking(false);
-    }
-  }, [router]);
+    setChecking(false);
+  }, []);
 
   async function handleSubmit() {
     const trimmed = code.trim().toUpperCase();

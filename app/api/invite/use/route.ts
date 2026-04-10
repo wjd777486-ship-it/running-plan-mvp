@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       use_count: newCount,
       used_by: sessionId,
       used_at: new Date().toISOString(),
+      is_active: newCount < MAX_USES,
     })
     .eq("code", code)
     .eq("use_count", data.use_count); // optimistic lock

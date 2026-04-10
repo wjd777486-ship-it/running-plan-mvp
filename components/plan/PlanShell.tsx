@@ -535,7 +535,7 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
         </div>
       </header>
 
-      <div className="mx-auto w-[320px] pb-8">
+      <div className="mx-auto w-[320px] pb-32">
         {/* Plan header: title + stats card */}
         <div style={{ paddingTop: 8 }}>
           <PlanHeader

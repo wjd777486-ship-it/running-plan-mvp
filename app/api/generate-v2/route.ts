@@ -271,6 +271,50 @@ interface V2Plan {
   weekly_plans: V2Week[];
 }
 
+// ── normalizePlan: LLM 출력값 고정 후처리 ──────────────────────────────────
+const HR_ZONE_MAP: Record<string, string> = {
+  easy: "Z2", lsd: "Z2", tempo: "Z4", interval: "Z5", race: "Z5", rest: "",
+};
+
+function normalizeRecoveryDuration(repDistanceM: number | undefined): string {
+  if (!repDistanceM) return "200m";
+  return repDistanceM <= 400 ? "200m" : "400m";
+}
+
+function normalizeIntervalDistanceKm(day: GeneratedDay): number {
+  const warmup = day.warmup?.distance_km ?? 0;
+  const cooldown = day.cooldown?.distance_km ?? 0;
+  const repDist = (day.sets?.rep_distance_m ?? 0) / 1000;
+  const repCount = day.sets?.rep_count ?? 0;
+  const recoveryStr = normalizeRecoveryDuration(day.sets?.rep_distance_m);
+  const recoveryKm = parseFloat(recoveryStr) / (recoveryStr.endsWith("m") && !recoveryStr.endsWith("km") ? 1000 : 1);
+  const totalRep = repDist * repCount;
+  const totalRecovery = recoveryKm * Math.max(0, repCount - 1);
+  const total = warmup + totalRep + totalRecovery + cooldown;
+  return total > 0 ? Math.round(total * 10) / 10 : day.distance_km;
+}
+
+function normalizePlan(plan: GeneratedPlan): GeneratedPlan {
+  for (const week of plan.weekly_plans) {
+    for (const day of week.days) {
+      // hr_zone 고정
+      day.hr_zone = HR_ZONE_MAP[day.session_type] ?? day.hr_zone;
+
+      if (day.session_type === "interval" && day.sets) {
+        // recovery_duration 고정
+        day.sets.recovery_duration = normalizeRecoveryDuration(day.sets.rep_distance_m);
+        // distance_km 재계산
+        day.distance_km = normalizeIntervalDistanceKm(day);
+      }
+    }
+    // week total 재계산
+    week.total_distance_km = Math.round(
+      week.days.reduce((sum, d) => sum + (d.distance_km ?? 0), 0) * 10
+    ) / 10;
+  }
+  return plan;
+}
+
 function makeRestDay(date: string): GeneratedDay {
   return {
     date,
@@ -721,6 +765,9 @@ ${lsdScheduleText}
             }
           }
         }
+
+        // hr_zone 고정, recovery_duration 고정, interval distance_km 재계산
+        normalizePlan(finalPlan);
 
         // 날짜 배정된 최종 플랜을 별도 헤더/트레일러로 전송
         controller.enqueue(encoder.encode("\n__PLAN_WITH_DATES__:" + JSON.stringify(finalPlan)));

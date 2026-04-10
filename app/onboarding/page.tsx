@@ -751,9 +751,9 @@ export default function OnboardingPage() {
               훈련 계획표 활용 TIP
             </span>
             <ol style={{ width: 240, flexShrink: 0, fontFamily: "Pretendard, sans-serif", fontSize: 13, fontWeight: 500, lineHeight: "140%", color: "#000", margin: 0, paddingLeft: 18, listStyleType: "decimal" }}>
-              <li>훈련 계획 화면에서 <span style={{ color: "#0088FF" }}>[훈련 저장]</span> 버튼 클릭</li>
-              <li>복사한 링크를 편한 곳에 저장</li>
-              <li>저장된 링크에 접속해 매일 훈련 확인!</li>
+              <li>훈련 계획 화면에서 <span className="text-[#0088FF]">[훈련 저장] 버튼 클릭</span></li>
+              <li>복사한 <span className="text-[#0088FF]">링크를 편한 곳에 저장</span></li>
+              <li><span className="text-[#0088FF]">저장된 링크에 접속</span>해 매일 훈련 확인!</li>
             </ol>
           </div>
         )}

@@ -66,7 +66,7 @@ function buildPaceRows(day: TrainingDay): PaceRow[] {
       if (day.sets.recovery_method || day.sets.recovery_pace) {
         rows.push({
           label: "세트 간 회복",
-          dist: "-",
+          dist: day.sets.recovery_duration ?? "-",
           pace: day.sets.recovery_pace ?? "-",
         });
       }

@@ -144,6 +144,7 @@ export interface GeneratedDaySets {
   rep_pace?: string;
   recovery_pace?: string;
   recovery_method?: string;
+  recovery_duration?: string;
 }
 
 export interface GeneratedDay {

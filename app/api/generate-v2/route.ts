@@ -615,8 +615,17 @@ ${goalOverrideLine}
   const easyMidSec = easySec - 5;
   const easyLateSec = easySec - 10;
 
-  // 테이퍼 시작 주차: 마지막 2주만 테이퍼 (totalWeeks - 1)
-  const taperStartWeekNum = totalWeeks - 1;
+  // 테이퍼 시작 주차: 단기 플랜은 테이퍼 비활성 (totalWeeks + 1), 일반은 마지막 2주
+  const taperStartWeekNum = isShortPlan ? totalWeeks + 1 : totalWeeks - 1;
+
+  const taperSection = isShortPlan
+    ? `[테이퍼링 — 단기 플랜 예외 적용]
+taper_start_week: ${taperStartWeekNum} (테이퍼 없음. 전 주차 인터벌 1회/주 허용)
+대회 전날(${totalWeeks}주차 마지막): 하루만 rest. 그 외 테이퍼 규칙 일절 적용 안 함.`
+    : `[테이퍼링 — 반드시 이 주차를 그대로 사용할 것]
+taper_start_week: ${taperStartWeekNum} (${taperStartWeekNum}주차부터 테이퍼 시작, 마지막 2주만 테이퍼)
+대회 2주 전 (${taperStartWeekNum}주차): 볼륨 40% 감소, 인터벌 1회 유지
+대회 1주 전 (${totalWeeks}주차): 볼륨 60% 감소, 인터벌 없음, easy만`;
 
   const calculatedPaces = `
 [계산된 페이스 — 반드시 이 값을 그대로 사용할 것. 재계산 금지]
@@ -630,10 +639,7 @@ Tempo 페이스: ${toMinSec(paces.tempo)}
 인터벌 중반 페이스: ${toMinSec(intervalMid)}
 인터벌 후반 페이스: ${toMinSec(intervalLate)}
 
-[테이퍼링 — 반드시 이 주차를 그대로 사용할 것]
-taper_start_week: ${taperStartWeekNum} (${taperStartWeekNum}주차부터 테이퍼 시작, 마지막 2주만 테이퍼)
-대회 2주 전 (${taperStartWeekNum}주차): 볼륨 40% 감소, 인터벌 1회 유지
-대회 1주 전 (${totalWeeks}주차): 볼륨 60% 감소, 인터벌 없음, easy만
+${taperSection}
 
 [LSD 거리 기준 — 반드시 이 값을 그대로 사용할 것]
 LSD 시작값: ${lsdStartKm}km | LSD 피크: ${lsdPeakKm}km

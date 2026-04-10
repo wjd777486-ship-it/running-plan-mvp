@@ -163,7 +163,7 @@ VDOT 30 미만이면 30으로, 60 초과면 60으로 clamp
 - warmup/cooldown: {"distance_km": 숫자, "pace": "M:SS/km"}
 - tempo 세션: tempo_segment에 {"distance_km": 숫자, "pace": "M:SS/km"} 포함
 - interval 세션: sets 필드는 반드시 아래 필드를 모두 채워야 해
-  rep_distance_m(숫자), rep_count(숫자), rep_pace("M:SS/km"), recovery_method(문자열), recovery_pace("M:SS/km"), recovery_duration(예: "90초")
+  rep_distance_m(숫자), rep_count(숫자), rep_pace("M:SS/km"), recovery_method(문자열), recovery_pace("M:SS/km"), recovery_duration(예: "400m", 반드시 거리로만 입력. 시간 입력 금지)
 - easy/lsd 세션: sets, warmup, cooldown, tempo_segment 출력하지 말 것
 - distance_km은 워밍업+본운동+쿨다운 포함한 총 주행 거리
 

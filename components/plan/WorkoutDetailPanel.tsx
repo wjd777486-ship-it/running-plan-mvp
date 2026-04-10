@@ -85,9 +85,10 @@ function buildPaceRows(day: TrainingDay): PaceRow[] {
       }
       rows.push({ label: "인터벌", dist: distLabel, pace: day.sets.rep_pace ?? "-" });
       if (day.sets.recovery_method || day.sets.recovery_pace) {
+        const recDuration = day.sets.recovery_duration ?? "";
         rows.push({
           label: "세트 간 회복",
-          dist: day.sets.recovery_duration ?? "-",
+          dist: parseDistanceKm(recDuration) > 0 ? recDuration : "-",
           pace: day.sets.recovery_pace ?? "-",
         });
       }

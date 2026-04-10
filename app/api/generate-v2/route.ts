@@ -141,7 +141,7 @@ VDOT 30 미만이면 30으로, 60 초과면 60으로 clamp
 인터벌 페이스 단계적 진행
 (테이퍼 2주 제외한 실제 훈련 기간 기준으로 3구간 분할)
 
-전반 1/3: 현재 VDOT 기준 Interval 페이스
+전반 1/3: (현재 VDOT Interval 페이스 + 목표 레이스 페이스) / 2
 중반 1/3: (현재 VDOT Interval + 목표 레이스 페이스+15초) 의 평균
 후반 1/3 (테이퍼 전): 목표 레이스 페이스 + 10~15초
 
@@ -540,7 +540,7 @@ ${goalOverrideLine}
   const racePaceSec = goalTotalSec / goalDistKm;
 
   const runPaceSec = body.formData.runningPaceMin * 60 + body.formData.runningPaceSec;
-  const rawFront = paces.interval;
+  const rawFront = Math.min(paces.interval, (paces.interval + racePaceSec) / 2);
   const rawMid = (paces.interval + racePaceSec + 15) / 2;
   const rawLate = Math.max(racePaceSec - 10, paces.interval - 10);
 
@@ -548,18 +548,29 @@ ${goalOverrideLine}
   const intervalMid = Math.min(rawMid, runPaceSec - 10);
   const intervalLate = Math.min(Math.min(rawLate, runPaceSec - 10), intervalMid);
 
+  // 단기 플랜 여부 (4주 이하)
+  const isShortPlan = totalWeeks <= 4;
+
   // LSD 시작값: max(maxRunDistance × 0.7, weeklyMileage1 × 0.25)
-  const lsdStartKm = Math.max(
+  let lsdStartKm = Math.max(
     Math.round(body.formData.maxRunDistance * 0.7 * 10) / 10,
     Math.round(body.formData.weeklyMileage1 * 0.25 * 10) / 10
   );
 
   // LSD 피크값: 판정 무관 공통 계산
   const maxRun = body.formData.maxRunDistance;
-  const raceTypeLsdCeil: Record<string, number> = { "5k": 15, "10k": 15, half: 24, full: 35 };
+  // 단기 플랜 5K/10K: LSD 상한 10km
+  const raceTypeLsdCeil: Record<string, number> = {
+    "5k": isShortPlan ? 10 : 15,
+    "10k": isShortPlan ? 10 : 15,
+    half: 24,
+    full: 35,
+  };
   const raceTypeLsdFloor: Record<string, number> = { "5k": 0, "10k": 0, half: 16, full: 24 };
   const ceilKm = raceTypeLsdCeil[body.formData.raceType] ?? 15;
   const floorKm = raceTypeLsdFloor[body.formData.raceType] ?? 0;
+  // 단기 플랜 시작값도 캡 이하로 클램프 (Math.max 역전 방지용)
+  lsdStartKm = Math.min(lsdStartKm, ceilKm);
   let lsdPeakKm = Math.min(ceilKm, Math.round(maxRun * 1.4 * 10) / 10);
   lsdPeakKm = Math.max(lsdPeakKm, floorKm);
   lsdPeakKm = Math.max(lsdPeakKm, lsdStartKm); // 시작값보다 낮아지는 역전 방지
@@ -683,6 +694,27 @@ ${lsdScheduleText}
 
         const finalPlan = assignDatesToPlan(v2Plan, body.formData, today);
         console.log("[/api/generate-v2] 날짜 배정 완료. 주차 수:", finalPlan.weekly_plans.length);
+
+        // 단기 플랜(4주 이하) 주차별 볼륨 캡 강제: base = max(weeklyMileage1, weeklyMileage4/4) × 1.1
+        if (isShortPlan) {
+          const base = Math.max(
+            body.formData.weeklyMileage1,
+            body.formData.weeklyMileage4 / 4
+          );
+          const weekVolumeCap = base * 1.1;
+          for (const week of finalPlan.weekly_plans) {
+            const activeDays = week.days.filter((d) => !d.is_rest && d.session_type !== "race");
+            const weekTotal = activeDays.reduce((sum, d) => sum + (d.distance_km ?? 0), 0);
+            if (weekTotal > weekVolumeCap && activeDays.length > 0) {
+              const scale = weekVolumeCap / weekTotal;
+              for (const day of activeDays) {
+                day.distance_km = Math.round(day.distance_km * scale * 10) / 10;
+              }
+              week.total_distance_km = Math.round(weekVolumeCap * 10) / 10;
+              console.log(`[volume-cap] week ${week.week}: ${weekTotal.toFixed(1)}km → ${weekVolumeCap.toFixed(1)}km (scale: ${scale.toFixed(2)})`);
+            }
+          }
+        }
 
         // 날짜 배정된 최종 플랜을 별도 헤더/트레일러로 전송
         controller.enqueue(encoder.encode("\n__PLAN_WITH_DATES__:" + JSON.stringify(finalPlan)));

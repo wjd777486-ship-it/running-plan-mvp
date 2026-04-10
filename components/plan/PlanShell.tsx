@@ -675,6 +675,40 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
         </div>
       </div>
 
+      {/* 플로팅 훈련 저장 버튼 */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 24,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 320,
+          zIndex: 90,
+          padding: "0 20px",
+          boxSizing: "border-box",
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleCopyUrl}
+          style={{
+            width: "100%",
+            padding: "16px 0",
+            borderRadius: 12,
+            border: "none",
+            backgroundColor: "#0088FF",
+            color: "#FFFFFF",
+            fontFamily: "Pretendard, sans-serif",
+            fontWeight: 600,
+            fontSize: 18,
+            lineHeight: "140%",
+            cursor: "pointer",
+          }}
+        >
+          훈련 저장
+        </button>
+      </div>
+
       {/* URL 복사 토스트 */}
       {urlSnackbar && (
         <div
@@ -693,7 +727,7 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
             fontWeight: 500,
             lineHeight: "1.5em",
             boxShadow: "0px 4px 10px 0px rgba(11, 12, 12, 0.16)",
-            zIndex: 100,
+            zIndex: 110,
             boxSizing: "border-box",
             whiteSpace: "pre-line",
           }}

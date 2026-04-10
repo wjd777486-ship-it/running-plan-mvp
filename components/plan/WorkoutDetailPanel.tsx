@@ -37,6 +37,27 @@ function formatDuration(min: number): string {
   return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
 }
 
+// "400m" → 0.4, "1.5km" → 1.5, 파싱 불가 → 0
+function parseDistanceKm(str: string): number {
+  const m = str.trim().match(/^(\d+(?:\.\d+)?)\s*(m|km)$/i);
+  if (!m) return 0;
+  return m[2].toLowerCase() === "km" ? parseFloat(m[1]) : parseFloat(m[1]) / 1000;
+}
+
+// 인터벌 세션 실제 총 거리 계산 (워밍업 + 세트 + 회복 + 쿨다운)
+function computeIntervalTotalKm(day: TrainingDay): number | null {
+  if (day.workoutType !== "intervals" || !day.sets) return null;
+  const warmup = day.warmup?.distance_km ?? 0;
+  const cooldown = day.cooldown?.distance_km ?? 0;
+  const repDist = (day.sets.rep_distance_m ?? 0) / 1000;
+  const repCount = day.sets.rep_count ?? 0;
+  const recoveryDist = day.sets.recovery_duration ? parseDistanceKm(day.sets.recovery_duration) : 0;
+  const totalRep = repDist * repCount;
+  const totalRecovery = recoveryDist * Math.max(0, repCount - 1);
+  const total = warmup + totalRep + totalRecovery + cooldown;
+  return total > 0 ? Math.round(total * 10) / 10 : null;
+}
+
 function normalizeHrZone(zone: string): string {
   // "Z1~Z2" → "Zone 1~2", "Z2" → "Zone 2", "Zone 1~Zone 2" → "Zone 1~2"
   return zone
@@ -205,6 +226,7 @@ export default function WorkoutDetailPanel({
   const isFuture = todayStr ? day.date > todayStr : false;
   const isRest = day.workoutType === "rest";
   const paceRows = buildPaceRows(day);
+  const displayDistanceKm = computeIntervalTotalKm(day) ?? day.distanceKm;
 
   if (isRest) {
     return (
@@ -300,8 +322,8 @@ export default function WorkoutDetailPanel({
                 훈련 정보
               </span>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {day.distanceKm != null && day.distanceKm > 0 && (
-                  <InfoRow label="총 거리" value={`${day.distanceKm}km`} valueColor="#0088FF" />
+                {displayDistanceKm != null && displayDistanceKm > 0 && (
+                  <InfoRow label="총 거리" value={`${displayDistanceKm}km`} valueColor="#0088FF" />
                 )}
                 {day.hrZone && (
                   <InfoRow label="HR 존" value={normalizeHrZone(day.hrZone)} />

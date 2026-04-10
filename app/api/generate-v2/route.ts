@@ -548,7 +548,8 @@ ${goalOverrideLine}
   const intervalMid = Math.min(rawMid, runPaceSec - 10);
   const intervalLate = Math.min(Math.min(rawLate, runPaceSec - 10), intervalMid);
 
-  // 단기 플랜 여부 (4주 이하)
+  // 주차 수 및 단기 플랜 여부
+  const totalWeeks = body.validation.validation.training_period.total_weeks;
   const isShortPlan = totalWeeks <= 4;
 
   // LSD 시작값: max(maxRunDistance × 0.7, weeklyMileage1 × 0.25)
@@ -577,7 +578,6 @@ ${goalOverrideLine}
 
   // 주차별 LSD 스케줄 계산 (3+1 빌드/회복 사이클)
   // 회복주 이후 LSD는 회복 전 주 LSD + 2km (회복주 LSD + 2km 아님)
-  const totalWeeks = body.validation.validation.training_period.total_weeks;
   const buildWeeks = Math.max(1, totalWeeks - 2); // 테이퍼 2주 제외
   const lsdSchedule: number[] = [];
   let buildLsd = lsdStartKm; // 회복주 직전 LSD값 (회복 후 재개 기준)

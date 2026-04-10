@@ -743,6 +743,20 @@ export default function OnboardingPage() {
             {subText}
           </p>
         </div>
+
+        {/* TIP 섹션 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, width: 240 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, width: 240 }}>
+            <span style={{ fontFamily: "Pretendard, sans-serif", fontSize: 14, fontWeight: 600, lineHeight: "140%", color: "#000" }}>
+              훈련 계획표 활용 TIP
+            </span>
+          </div>
+          <p style={{ width: 240, flexShrink: 0, fontFamily: "Pretendard, sans-serif", fontSize: 13, fontWeight: 500, lineHeight: "140%", color: "#000", margin: 0 }}>
+            훈련 계획 화면에서 <span style={{ color: "#0088FF" }}>[훈련 저장]</span> 버튼 클릭<br />
+            복사한 링크를 편한 곳에 저장<br />
+            저장된 링크에 접속해 매일 훈련 확인!
+          </p>
+        </div>
       </main>
     );
   }

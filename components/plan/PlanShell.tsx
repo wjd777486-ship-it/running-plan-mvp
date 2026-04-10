@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { trackEvent } from "@/lib/analytics";
 import type { GeneratedPlan, TrainingDay, WorkoutType, Phase } from "@/lib/types";
 import { supabase } from "@/lib/supabase/client";
 import { ChevronLeftIcon, ChevronRightIcon, CopyIcon, BookmarkIcon } from "lucide-react";
@@ -307,6 +308,9 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [urlSnackbar, setUrlSnackbar] = useState(false);
 
+  // GA4: 훈련 계획표 PV
+  useEffect(() => { trackEvent("training_plan_pv"); }, []);
+
   const handleCopyUrl = useCallback(() => {
     navigator.clipboard.writeText(window.location.href).catch(() => {});
     setUrlSnackbar(true);
@@ -320,6 +324,11 @@ export default function PlanShell({ generatedPlan, planId }: PlanShellProps) {
 
   // Calendar bottom sheet state
   const [calendarOpen, setCalendarOpen] = useState(false);
+
+  // GA4: 일정표 바텀시트 PV
+  useEffect(() => {
+    if (calendarOpen) trackEvent("training_schedule_bottom_sheet_pv");
+  }, [calendarOpen]);
   const [calendarAnimating, setCalendarAnimating] = useState(false);
   const [viewMonth, setViewMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { trackEvent } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 
 export default function InvitePage() {
@@ -12,6 +13,7 @@ export default function InvitePage() {
 
   useEffect(() => {
     setChecking(false);
+    trackEvent("invite_code_pv");
   }, []);
 
   async function handleSubmit() {

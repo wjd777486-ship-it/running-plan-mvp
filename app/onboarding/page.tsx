@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { createPlan } from "@/app/actions/plan";
 import { getOrCreateAnonymousUserId } from "@/lib/anonymous-user";
 import type { RunnerFormData, RaceType, ValidationResult, GeneratedPlan } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -526,6 +527,22 @@ export default function OnboardingPage() {
     const savedPlanId = localStorage.getItem("plan_id");
     if (savedPlanId) { router.replace(`/plan?id=${savedPlanId}`); return; }
   }, [router]);
+
+  // GA4: 화면 전환 시 PV 이벤트
+  useEffect(() => {
+    if (appStep === "form") {
+      if (formStep === 1) trackEvent("onboarding_goal_pv");
+      else if (formStep === 2) trackEvent("onboarding_basic_info_pv");
+      else if (formStep === 3) trackEvent("onboarding_running_info_pv");
+    } else if (appStep === "validating") {
+      trackEvent("goal_validation_loading_pv");
+    } else if (appStep === "result") {
+      const hasAiSuggestion = !!validationResult?.validation.realistic_goal.suggested_time;
+      trackEvent(hasAiSuggestion ? "goal_suggestion_ai_pv" : "goal_suggestion_default_pv");
+    } else if (appStep === "generating") {
+      trackEvent("training_plan_loading_pv");
+    }
+  }, [appStep, formStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function setField<K extends keyof RunnerFormData>(key: K, value: RunnerFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));

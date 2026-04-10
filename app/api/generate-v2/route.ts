@@ -162,8 +162,9 @@ VDOT 30 미만이면 30으로, 60 초과면 60으로 clamp
 - interval/tempo 세션은 반드시 warmup, cooldown 정보를 포함해
 - warmup/cooldown: {"distance_km": 숫자, "pace": "M:SS/km"}
 - tempo 세션: tempo_segment에 {"distance_km": 숫자, "pace": "M:SS/km"} 포함
-- interval 세션: sets 필드는 반드시 아래 필드를 모두 채워야 해
+- interval 세션: sets 필드는 반드시 단일 객체(배열 금지)로 아래 필드를 모두 채워야 해
   rep_distance_m(숫자), rep_count(숫자), rep_pace("M:SS/km"), recovery_method(문자열), recovery_pace("M:SS/km"), recovery_duration(예: "400m", 반드시 거리로만 입력. 시간 입력 금지)
+  sets 예시(배열 아님, 객체): {"rep_distance_m":1000,"rep_count":4,"rep_pace":"4:30/km","recovery_method":"조깅","recovery_pace":"6:30/km","recovery_duration":"400m"}
 - easy/lsd 세션: sets, warmup, cooldown, tempo_segment 출력하지 말 것
 - distance_km은 워밍업+본운동+쿨다운 포함한 총 주행 거리
 
@@ -294,24 +295,89 @@ function normalizeIntervalDistanceKm(day: GeneratedDay): number {
   return total > 0 ? Math.round(total * 10) / 10 : day.distance_km;
 }
 
-function normalizePlan(plan: GeneratedPlan): GeneratedPlan {
-  for (const week of plan.weekly_plans) {
-    for (const day of week.days) {
-      // hr_zone 고정
-      day.hr_zone = HR_ZONE_MAP[day.session_type] ?? day.hr_zone;
+// sets가 배열로 와도 첫 번째 요소로 복구
+function normalizeSets(sets: unknown): GeneratedDay["sets"] {
+  if (!sets) return null;
+  if (Array.isArray(sets)) {
+    const first = (sets as GeneratedDay["sets"][])[0] ?? null;
+    if (first) console.warn("[normalizePlan] sets가 배열로 수신됨 — 첫 번째 요소로 복구");
+    return first;
+  }
+  return sets as GeneratedDay["sets"];
+}
 
+const RACE_DISTANCE_KM: Record<string, number> = {
+  "5k": 5.0, "10k": 10.0, half: 21.1, full: 42.195,
+};
+
+function normalizePlan(
+  plan: GeneratedPlan,
+  weekVolumeCap?: number,
+  lsdSchedule?: number[],
+  raceType?: string,
+): GeneratedPlan {
+  for (let weekIdx = 0; weekIdx < plan.weekly_plans.length; weekIdx++) {
+    const week = plan.weekly_plans[weekIdx];
+    // 1) 세션별 고정
+    for (const day of week.days) {
+      day.sets = normalizeSets(day.sets as unknown);
+      day.hr_zone = HR_ZONE_MAP[day.session_type] ?? day.hr_zone;
       if (day.session_type === "interval" && day.sets) {
-        // recovery_duration 고정
         day.sets.recovery_duration = normalizeRecoveryDuration(day.sets.rep_distance_m);
-        // distance_km 재계산
         day.distance_km = normalizeIntervalDistanceKm(day);
       }
+      if (day.session_type === "lsd" && lsdSchedule) {
+        const target = lsdSchedule[weekIdx];
+        if (target !== undefined) day.distance_km = target;
+      }
+      if (day.session_type === "race" && raceType) {
+        const raceDist = RACE_DISTANCE_KM[raceType];
+        if (raceDist !== undefined) day.distance_km = raceDist;
+      }
     }
-    // week total 재계산
+
+    // 2) 볼륨 캡: easy 세션만 비례 축소
+    if (weekVolumeCap !== undefined) {
+      const easyDays = week.days.filter((d) => d.session_type === "easy");
+      const nonEasyKm = week.days
+        .filter((d) => !d.is_rest && d.session_type !== "easy" && d.session_type !== "race")
+        .reduce((sum, d) => sum + (d.distance_km ?? 0), 0);
+      const easyKm = easyDays.reduce((sum, d) => sum + (d.distance_km ?? 0), 0);
+      const weekTotal = nonEasyKm + easyKm;
+      if (weekTotal > weekVolumeCap && easyKm > 0) {
+        const easyBudget = Math.max(weekVolumeCap - nonEasyKm, 0);
+        const scale = easyBudget / easyKm;
+        for (const day of easyDays) {
+          day.distance_km = Math.round((day.distance_km ?? 0) * scale * 10) / 10;
+        }
+        console.log(`[volume-cap] week ${week.week}: ${weekTotal.toFixed(1)}km → capped (easy ×${scale.toFixed(2)})`);
+      }
+    }
+
+    // 3) week total 재계산
     week.total_distance_km = Math.round(
       week.days.reduce((sum, d) => sum + (d.distance_km ?? 0), 0) * 10
     ) / 10;
   }
+
+  // 4) plan_summary stats 재계산
+  const allDays = plan.weekly_plans.flatMap((w) => w.days);
+  const activeDays = allDays.filter((d) => !d.is_rest && d.session_type !== "rest");
+  plan.plan_summary.stats.total_easy_runs = activeDays.filter((d) => d.session_type === "easy").length;
+  plan.plan_summary.stats.total_interval_sessions = activeDays.filter((d) => d.session_type === "interval").length;
+  plan.plan_summary.stats.total_tempo_sessions = activeDays.filter((d) => d.session_type === "tempo").length;
+  plan.plan_summary.stats.total_lsd_sessions = activeDays.filter((d) => d.session_type === "lsd").length;
+  plan.plan_summary.stats.longest_run_km = activeDays.length > 0
+    ? Math.max(...activeDays.map((d) => d.distance_km ?? 0))
+    : 0;
+  plan.plan_summary.total_sessions = activeDays.length;
+  plan.plan_summary.total_distance_km = Math.round(
+    plan.weekly_plans.reduce((sum, w) => sum + (w.total_distance_km ?? 0), 0) * 10
+  ) / 10;
+  plan.plan_summary.peak_weekly_distance_km = plan.weekly_plans.length > 0
+    ? Math.max(...plan.weekly_plans.map((w) => w.total_distance_km ?? 0))
+    : 0;
+
   return plan;
 }
 
@@ -596,9 +662,10 @@ ${goalOverrideLine}
   const totalWeeks = body.validation.validation.training_period.total_weeks;
   const isShortPlan = totalWeeks <= 4;
 
-  // LSD 시작값: max(maxRunDistance × 0.7, weeklyMileage1 × 0.25)
+  // 이슈 2-B: half/full은 높은 계수(0.85) 사용 — 긴 거리 종목은 maxRunDistance에 가깝게 시작
+  const lsdStartCoeff = (body.formData.raceType === "full" || body.formData.raceType === "half") ? 0.85 : 0.7;
   let lsdStartKm = Math.max(
-    Math.round(body.formData.maxRunDistance * 0.7 * 10) / 10,
+    Math.round(body.formData.maxRunDistance * lsdStartCoeff * 10) / 10,
     Math.round(body.formData.weeklyMileage1 * 0.25 * 10) / 10
   );
 
@@ -612,12 +679,16 @@ ${goalOverrideLine}
     full: 35,
   };
   const raceTypeLsdFloor: Record<string, number> = { "5k": 0, "10k": 0, half: 16, full: 24 };
+  // 이슈 2-B: lsdPeakKm 하한 강제 (buildWeeks가 짧아도 피크 보장)
+  const raceTypeLsdPeakFloor: Record<string, number> = { "5k": 0, "10k": 0, half: 18, full: 30 };
   const ceilKm = raceTypeLsdCeil[body.formData.raceType] ?? 15;
   const floorKm = raceTypeLsdFloor[body.formData.raceType] ?? 0;
+  const peakFloorKm = raceTypeLsdPeakFloor[body.formData.raceType] ?? 0;
   // 단기 플랜 시작값도 캡 이하로 클램프 (Math.max 역전 방지용)
   lsdStartKm = Math.min(lsdStartKm, ceilKm);
   let lsdPeakKm = Math.min(ceilKm, Math.round(maxRun * 1.4 * 10) / 10);
   lsdPeakKm = Math.max(lsdPeakKm, floorKm);
+  lsdPeakKm = Math.max(lsdPeakKm, peakFloorKm); // 이슈 2-B: 피크 하한 강제
   lsdPeakKm = Math.max(lsdPeakKm, lsdStartKm); // 시작값보다 낮아지는 역전 방지
 
   // 주차별 LSD 스케줄 계산 (3+1 빌드/회복 사이클)
@@ -745,29 +816,20 @@ ${lsdScheduleText}
         const finalPlan = assignDatesToPlan(v2Plan, body.formData, today);
         console.log("[/api/generate-v2] 날짜 배정 완료. 주차 수:", finalPlan.weekly_plans.length);
 
-        // 단기 플랜(4주 이하) 주차별 볼륨 캡 강제: base = max(weeklyMileage1, weeklyMileage4/4) × 1.1
-        if (isShortPlan) {
-          const base = Math.max(
-            body.formData.weeklyMileage1,
-            body.formData.weeklyMileage4 / 4
-          );
-          const weekVolumeCap = base * 1.1;
-          for (const week of finalPlan.weekly_plans) {
-            const activeDays = week.days.filter((d) => !d.is_rest && d.session_type !== "race");
-            const weekTotal = activeDays.reduce((sum, d) => sum + (d.distance_km ?? 0), 0);
-            if (weekTotal > weekVolumeCap && activeDays.length > 0) {
-              const scale = weekVolumeCap / weekTotal;
-              for (const day of activeDays) {
-                day.distance_km = Math.round(day.distance_km * scale * 10) / 10;
-              }
-              week.total_distance_km = Math.round(weekVolumeCap * 10) / 10;
-              console.log(`[volume-cap] week ${week.week}: ${weekTotal.toFixed(1)}km → ${weekVolumeCap.toFixed(1)}km (scale: ${scale.toFixed(2)})`);
-            }
-          }
+        // 이슈 3: 세션 수 불일치 경고
+        const assignedSessions = finalPlan.weekly_plans
+          .flatMap((w) => w.days)
+          .filter((d) => !d.is_rest && d.session_type !== "rest").length;
+        const llmSessions = v2Plan.plan_summary.total_sessions;
+        if (Math.abs(assignedSessions - llmSessions) > 2) {
+          console.warn(`[session-count] LLM: ${llmSessions}, 배정 후: ${assignedSessions} (차이: ${assignedSessions - llmSessions})`);
         }
 
-        // hr_zone 고정, recovery_duration 고정, interval distance_km 재계산
-        normalizePlan(finalPlan);
+        // hr_zone 고정, recovery_duration 고정, interval distance_km 재계산, 볼륨 캡(easy only), stats 재계산
+        const weekVolumeCap = isShortPlan
+          ? Math.max(body.formData.weeklyMileage1, body.formData.weeklyMileage4 / 4) * 1.1
+          : undefined;
+        normalizePlan(finalPlan, weekVolumeCap, lsdSchedule, body.formData.raceType);
 
         // 날짜 배정된 최종 플랜을 별도 헤더/트레일러로 전송
         controller.enqueue(encoder.encode("\n__PLAN_WITH_DATES__:" + JSON.stringify(finalPlan)));

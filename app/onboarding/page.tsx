@@ -296,11 +296,16 @@ function ValidationDisplay({
   const [selectedPlan, setSelectedPlan] = useState<"my" | "ai">("my");
 
   const isHardGoal = !isGreen && !!aiTimeDisplay;
+  const isEasyGoal = validation.vdot.gap < 0;
 
-  const titleText = isHardGoal
+  const titleText = isEasyGoal
+    ? "러너님에게\n너무 쉬운 목표예요"
+    : isHardGoal
     ? "러너님에게 지금은\n어려운 목표예요"
     : "러너님이 충분히\n달성할 수 있는 목표예요";
-  const subText = isHardGoal
+  const subText = isEasyGoal
+    ? "AI 러닝 코치가 훈련 계획을 짜줄게요."
+    : isHardGoal
     ? "AI 러닝 코치가 목표를 추천해드릴게요."
     : "AI 러닝 코치가 훈련 계획을 짜줄게요.";
 

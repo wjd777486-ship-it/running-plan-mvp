@@ -37,19 +37,19 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        {/* GA4 — dataLayer 초기화는 동기적으로, 스크립트 로드만 비동기 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-4VE97C3BXP');`,
+          }}
+        />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-4VE97C3BXP"
           strategy="afterInteractive"
         />
-        <Script id="ga4-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-4VE97C3BXP');
-          `}
-        </Script>
+      </head>
+      <body className="min-h-full flex flex-col">
         <KakaoInit />
         {children}
       </body>

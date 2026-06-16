@@ -71,8 +71,8 @@ export async function POST(req: Request) {
     }
 
     const tokenData = await tokenRes.json() as Record<string, unknown>;
-    console.log(`[toss-auth] tokenData keys: ${Object.keys(tokenData).join(", ")}, accessToken present: ${!!tokenData.accessToken}`);
-    const accessToken = tokenData.accessToken as string | undefined;
+    const tokenSuccess = tokenData.success as Record<string, unknown> | undefined;
+    const accessToken = (tokenData.accessToken ?? tokenSuccess?.accessToken) as string | undefined;
     if (!accessToken) {
       console.error(`[toss-auth] no accessToken in response:`, JSON.stringify(tokenData));
       return Response.json({ error: "no_access_token", detail: tokenData }, { status: 400, headers: CORS_HEADERS });
@@ -93,7 +93,8 @@ export async function POST(req: Request) {
       return Response.json({ error: "user_info_failed", status: userRes.status, detail: errText }, { status: 400 });
     }
 
-    const userInfo = await userRes.json() as Record<string, string>;
+    const userRaw = await userRes.json() as Record<string, unknown>;
+    const userInfo = (userRaw.success ?? userRaw) as Record<string, string>;
     console.log(`[toss-auth] userInfo keys: ${Object.keys(userInfo).join(", ")}`);
 
     const tossUserId = userInfo.userKey;

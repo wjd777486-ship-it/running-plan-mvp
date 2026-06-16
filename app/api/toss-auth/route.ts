@@ -70,8 +70,13 @@ export async function POST(req: Request) {
       return Response.json({ error: "token_exchange_failed", status: tokenRes.status, detail: errText }, { status: 400 });
     }
 
-    const tokenData = await tokenRes.json() as { accessToken: string };
-    const accessToken = tokenData.accessToken;
+    const tokenData = await tokenRes.json() as Record<string, unknown>;
+    console.log(`[toss-auth] tokenData keys: ${Object.keys(tokenData).join(", ")}, accessToken present: ${!!tokenData.accessToken}`);
+    const accessToken = tokenData.accessToken as string | undefined;
+    if (!accessToken) {
+      console.error(`[toss-auth] no accessToken in response:`, JSON.stringify(tokenData));
+      return Response.json({ error: "no_access_token", detail: tokenData }, { status: 400, headers: CORS_HEADERS });
+    }
 
     // 2단계: accessToken으로 사용자 정보 조회
     const userRes = await undiciFetch(

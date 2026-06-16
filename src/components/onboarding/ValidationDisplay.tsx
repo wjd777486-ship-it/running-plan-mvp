@@ -32,7 +32,7 @@ export function ValidationDisplay({
   const [selectedPlan, setSelectedPlan] = useState<"my" | "ai">("my");
 
   const isHardGoal = !isGreen && !!aiTimeDisplay;
-  const isEasyGoal = validation.vdot.gap < 0;
+  const isEasyGoal = validation.vdot.gap < 0 && !isHardGoal;
 
   const titleText = isEasyGoal
     ? "러너님에게\n너무 쉬운 목표예요"
@@ -182,7 +182,13 @@ export function ValidationDisplay({
         <div style={{ height: 20 }} />
       </div>
 
-      <div className="shrink-0" style={{ padding: 20 }}>
+      <div style={{ height: 96 }} />
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        padding: "16px 20px",
+        paddingBottom: "calc(16px + env(safe-area-inset-bottom))",
+        backgroundColor: "#F5F5F9",
+      }}>
         {error && <p className="text-sm text-[#FC6C6C] text-center" style={{ marginBottom: 12 }}>{error}</p>}
         <button
           onClick={() => onProceed(selectedPlan === "ai")}

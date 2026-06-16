@@ -170,15 +170,6 @@ export function Step2({
         )}
       </div>
 
-      <div>
-        <FieldLabel label="러닝 경력" required />
-        <div className="flex items-center gap-[6px]">
-          <NumBox value={form.expYears} onChange={(v) => setField("expYears", v)} min={0} max={50} />
-          <span className="font-medium text-black" style={{ fontSize: 16, lineHeight: "1.45" }}>년</span>
-          <NumBox value={form.expMonths} onChange={(v) => setField("expMonths", v)} min={0} max={11} />
-          <span className="font-medium text-black" style={{ fontSize: 16, lineHeight: "1.45" }}>개월</span>
-        </div>
-      </div>
     </div>
   );
 }

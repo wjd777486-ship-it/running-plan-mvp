@@ -3,12 +3,12 @@ import { defineConfig } from "@apps-in-toss/web-framework/config";
 export default defineConfig({
   appName: "jun-running-plan",
   brand: {
-    displayName: "앱 이름", // 화면에 노출될 앱의 한글 이름으로 바꿔주세요.
-    primaryColor: "#FF91D5", // 화면에 노출될 앱의 기본 색상으로 바꿔주세요.
-    icon: "", // 화면에 노출될 앱의 아이콘 이미지 주소로 바꿔주세요.
+    displayName: "달려",
+    primaryColor: "#0088FF",
+    icon: "https://static.toss.im/appsintoss/38317/67e8d00a-5176-40e9-8ed3-a49b22b554a6.png",
   },
   web: {
-    host: "172.30.1.82",
+    host: "172.30.1.11",
     port: 5173,
     commands: {
       dev: "vite --host",

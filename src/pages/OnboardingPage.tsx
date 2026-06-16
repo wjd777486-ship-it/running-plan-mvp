@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getTossUserId } from "../lib/tossAuth";
+import { getTossUserId, type TossProfile } from "../lib/tossAuth";
 import type { RunnerFormData, ValidationResult, GeneratedPlan } from "../lib/types";
 import { trackEvent } from "../lib/analytics";
 import { API_BASE_URL } from "../lib/apiBase";
@@ -10,8 +10,19 @@ import { ValidationDisplay } from "../components/onboarding/ValidationDisplay";
 import { OnboardingForm } from "../components/onboarding/OnboardingForm";
 import { TossAdsBanner } from "../components/TossAdsBanner";
 
+function ageFromBirthdate(birthdate: string): number {
+  const year = parseInt(birthdate.slice(0, 4));
+  const month = parseInt(birthdate.slice(4, 6)) - 1;
+  const day = parseInt(birthdate.slice(6, 8));
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  if (today.getMonth() < month || (today.getMonth() === month && today.getDate() < day)) age--;
+  return Math.max(10, Math.min(99, age));
+}
+
 export default function OnboardingPage() {
   const navigate = useNavigate();
+  const [tossProfile, setTossProfile] = useState<TossProfile | null>(null);
   const [form, setForm] = useState<RunnerFormData>(INITIAL_FORM);
   const [formStep, setFormStep] = useState<1 | 2 | 3>(1);
   const [appStep, setAppStep] = useState<"form" | "validating" | "result" | "generating">("form");
@@ -34,6 +45,18 @@ export default function OnboardingPage() {
     const savedPlanId = localStorage.getItem("plan_id");
     if (savedPlanId) {
       navigate(`/plan?id=${savedPlanId}`, { replace: true });
+      return;
+    }
+    const cachedUserId = localStorage.getItem("toss_user_id");
+    if (cachedUserId) {
+      const profile: TossProfile = {
+        userId: cachedUserId,
+        gender: localStorage.getItem("toss_gender") as "male" | "female" | null,
+        birthdate: localStorage.getItem("toss_birthdate"),
+      };
+      setTossProfile(profile);
+      if (profile.gender) setForm((prev) => ({ ...prev, gender: profile.gender! }));
+      if (profile.birthdate) setForm((prev) => ({ ...prev, age: ageFromBirthdate(profile.birthdate!) }));
     }
   }, [navigate]);
 
@@ -81,16 +104,20 @@ export default function OnboardingPage() {
     }));
   }
 
+  const hasTossBasicInfo = !!tossProfile?.gender && !!tossProfile?.birthdate;
+
   function handleBack() {
     setError(null);
-    if (formStep > 1) {
+    if (formStep === 3 && hasTossBasicInfo) {
+      setFormStep(1);
+    } else if (formStep > 1) {
       setFormStep((s) => (s - 1) as 1 | 2 | 3);
     } else {
       navigate(-1);
     }
   }
 
-  function handleNext() {
+  async function handleNext() {
     setError(null);
 
     if (formStep === 1) {
@@ -100,6 +127,12 @@ export default function OnboardingPage() {
       if (form.goalHours === 0 && form.goalMinutes === 0) errors.goalTime = "목표 기록을 입력해 주세요.";
       if (Object.keys(errors).length > 0) { setStep1Errors(errors); return; }
       setStep1Errors({});
+      if (tossProfile?.gender && tossProfile?.birthdate) {
+        setFormStep(3);
+      } else {
+        setFormStep(2);
+      }
+      return;
     }
 
     if (formStep === 2) {
@@ -191,7 +224,7 @@ export default function OnboardingPage() {
       if (!fullText.includes(planMarker)) throw new Error("플랜 응답에서 날짜 배정 데이터를 찾을 수 없어요. 다시 시도해주세요.");
       const generatedPlan: GeneratedPlan = JSON.parse(fullText.split(planMarker)[1]);
       setGeneratingWeeks(generatedPlan.plan_summary.total_weeks);
-      const userId = await getTossUserId();
+      const userId = tossProfile?.userId ?? await getTossUserId();
       const result = await createPlan(form, generatedPlan, userId);
       if ("error" in result) throw new Error(result.error);
 
@@ -212,11 +245,11 @@ export default function OnboardingPage() {
 
   if (appStep === "validating" || appStep === "generating") {
     const mainText = appStep === "generating"
-      ? `AI 러닝 코치가\n${generatingWeeks}주차 훈련 계획 짜는 중`
-      : "AI 러닝 코치가\n훈련 계획을 짜고 있어요";
+      ? "AI 러닝 코치가\n훈련 계획을 짜고 있어요."
+      : "AI 러닝 코치가\n목표를 분석하고 있어요.";
     const subText = appStep === "generating"
-      ? "최대 1분 이상 걸릴 수 있어요."
-      : "목표까지 남은 기간에 따라\n1분 이상 걸릴 수 있어요.";
+      ? "최대 1분 걸릴 수 있어요."
+      : "잠시만 기다려 주세요.";
 
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[#F5F5F9] px-5" style={{ paddingTop: 16 }}>
@@ -245,21 +278,7 @@ export default function OnboardingPage() {
           </p>
         </div>
 
-        {appStep === "generating" && (
-          <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, width: 240 }}>
-              <span style={{ fontFamily: "Pretendard, sans-serif", fontSize: 14, fontWeight: 600, lineHeight: "140%", color: "#000" }}>
-                훈련 계획표 활용 TIP
-              </span>
-              <ol style={{ width: 240, flexShrink: 0, fontFamily: "Pretendard, sans-serif", fontSize: 13, fontWeight: 500, lineHeight: "140%", color: "#000", margin: 0, paddingLeft: 18, listStyleType: "decimal" }}>
-                <li>훈련 계획 화면에서 <span className="text-[#0088FF]">[훈련 저장] 버튼 클릭</span></li>
-                <li>복사한 <span className="text-[#0088FF]">링크를 편한 곳에 저장</span></li>
-                <li><span className="text-[#0088FF]">저장된 링크에 접속</span>해 매일 훈련 확인!</li>
-              </ol>
-            </div>
-            <TossAdsBanner />
-          </>
-        )}
+        {appStep === "generating" && <TossAdsBanner />}
       </main>
     );
   }

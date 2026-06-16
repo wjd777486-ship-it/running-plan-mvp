@@ -2,6 +2,16 @@ import { Agent, fetch as undiciFetch } from "undici";
 
 const TOSS_API_BASE = "https://apps-in-toss-api.toss.im";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function base64urlToBytes(b64url: string): Uint8Array {
   const standard = b64url
     .replace(/-/g, "+")
@@ -27,13 +37,13 @@ export async function POST(req: Request) {
     const { authorizationCode, referrer } = await req.json();
 
     if (!authorizationCode || !referrer) {
-      return Response.json({ error: "authorizationCode and referrer required" }, { status: 400 });
+      return Response.json({ error: "authorizationCode and referrer required" }, { status: 400, headers: CORS_HEADERS });
     }
 
     const clientCert = process.env.TOSS_CLIENT_CERT;
     const clientKey = process.env.TOSS_CLIENT_KEY;
     if (!clientCert || !clientKey) {
-      return Response.json({ error: "TOSS_CLIENT_CERT or TOSS_CLIENT_KEY not set" }, { status: 500 });
+      return Response.json({ error: "TOSS_CLIENT_CERT or TOSS_CLIENT_KEY not set" }, { status: 500, headers: CORS_HEADERS });
     }
 
     const agent = new Agent({
@@ -83,13 +93,13 @@ export async function POST(req: Request) {
 
     const tossUserId = userInfo.userKey;
     if (!tossUserId) {
-      return Response.json({ error: "userKey not found", userInfo }, { status: 400 });
+      return Response.json({ error: "userKey not found", userInfo }, { status: 400, headers: CORS_HEADERS });
     }
 
     // 3단계: 개인정보 필드 복호화
     const decryptKeyB64 = process.env.TOSS_DECRYPT_KEY;
     if (!decryptKeyB64) {
-      return Response.json({ error: "TOSS_DECRYPT_KEY not set" }, { status: 500 });
+      return Response.json({ error: "TOSS_DECRYPT_KEY not set" }, { status: 500, headers: CORS_HEADERS });
     }
 
     const keyBytes = base64urlToBytes(decryptKeyB64);
@@ -117,9 +127,9 @@ export async function POST(req: Request) {
       }
     }
 
-    return Response.json({ tossUserId, gender, birthdate });
+    return Response.json({ tossUserId, gender, birthdate }, { headers: CORS_HEADERS });
   } catch (err) {
     console.error(`[toss-auth] unhandled error:`, err);
-    return Response.json({ error: String(err) }, { status: 500 });
+    return Response.json({ error: String(err) }, { status: 500, headers: CORS_HEADERS });
   }
 }

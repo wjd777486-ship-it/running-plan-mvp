@@ -40,20 +40,36 @@ export async function getTossProfile(): Promise<TossProfile> {
     };
   }
 
+  let lastError = "";
   try {
-    const loginResult = await (_pendingLogin ?? appLogin());
-    _pendingLogin = null;
-    const { authorizationCode, referrer } = loginResult as { authorizationCode: string; referrer: string };
+    let loginResult: { authorizationCode: string; referrer: string };
+    try {
+      loginResult = await (_pendingLogin ?? appLogin()) as { authorizationCode: string; referrer: string };
+      _pendingLogin = null;
+    } catch (e) {
+      lastError = `appLogin failed: ${e}`;
+      throw new Error(lastError);
+    }
+    const { authorizationCode, referrer } = loginResult;
     const controller = new AbortController();
     const fetchTimer = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(EDGE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ authorizationCode, referrer }),
-      signal: controller.signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(EDGE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorizationCode, referrer }),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      lastError = `fetch failed: ${e}`;
+      throw new Error(lastError);
+    }
     clearTimeout(fetchTimer);
-    if (!res.ok) throw new Error(`edge function error: ${res.status}`);
+    if (!res.ok) {
+      lastError = `edge error: ${res.status}`;
+      throw new Error(lastError);
+    }
     const { tossUserId, gender: rawGender, birthdate } = await res.json();
 
     const gender = normalizeGender(rawGender);
@@ -62,7 +78,8 @@ export async function getTossProfile(): Promise<TossProfile> {
     if (birthdate) localStorage.setItem(CACHE_KEYS.birthdate, birthdate);
 
     return { userId: tossUserId, gender, birthdate: birthdate ?? null };
-  } catch {
+  } catch (e) {
+    localStorage.setItem("toss_last_error", lastError || String(e));
     const fallbackId = getOrCreateAnonymousUserId();
     return { userId: fallbackId, gender: null, birthdate: null };
   }

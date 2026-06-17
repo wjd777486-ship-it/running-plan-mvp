@@ -35,7 +35,8 @@ export default function MainPage() {
     if (localStorage.getItem("toss_user_id")) {
       navigate("/onboarding");
     } else {
-      showToast("로그인에 실패했어요. 다시 시도해 주세요.");
+      const err = localStorage.getItem("toss_last_error") ?? "unknown";
+      showToast(`로그인 실패: ${err}`);
       setIsLoading(false);
     }
   }

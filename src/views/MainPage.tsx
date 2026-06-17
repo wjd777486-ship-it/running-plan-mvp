@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Stepper } from "@toss/tds-mobile";
 
@@ -15,6 +15,13 @@ export default function MainPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedPlanId = localStorage.getItem("plan_id");
+    if (savedPlanId) {
+      navigate(`/plan?id=${savedPlanId}`, { replace: true });
+    }
+  }, [navigate]);
 
   function showToast(msg: string) {
     setToast(msg);

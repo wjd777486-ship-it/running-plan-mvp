@@ -7,7 +7,6 @@ import type { RunnerFormData } from "../../lib/types";
 import {
   RACE_OPTIONS,
   DAYS_OF_WEEK,
-  ProgressBar,
   FieldLabel,
   NumBox,
   Chip,
@@ -384,8 +383,6 @@ export function OnboardingForm({
 }) {
   return (
     <main className="flex flex-col min-h-screen max-w-[320px] mx-auto bg-white" style={{ paddingTop: 16 }}>
-      <ProgressBar step={formStep} />
-
       <div className="p-5 shrink-0">
         <h1
           className="font-semibold text-black whitespace-pre-line"

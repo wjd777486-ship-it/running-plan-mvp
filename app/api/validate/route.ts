@@ -3,6 +3,16 @@ import type { RunnerFormData, ValidationResult } from "@/lib/types";
 
 const client = new Anthropic();
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 const VALIDATE_PROMPT = `[역할]
 너는 마라톤 훈련 전문 코치야.
 오늘 날짜는 {today}야.
@@ -178,7 +188,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON" }, { status: 400, headers: CORS_HEADERS });
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -276,14 +286,14 @@ export async function POST(request: Request) {
       console.error("[/api/validate] Cleaned text:", text);
       return Response.json(
         { error: "Failed to parse AI response", raw },
-        { status: 502 }
+        { status: 502, headers: CORS_HEADERS }
       );
     }
 
-    return Response.json(result);
+    return Response.json(result, { headers: CORS_HEADERS });
   } catch (err) {
     console.error("[/api/validate] Anthropic API error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json({ error: message }, { status: 500, headers: CORS_HEADERS });
   }
 }

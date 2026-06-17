@@ -4,6 +4,16 @@ import type { RunnerFormData, ValidationResult, GeneratedPlan, GeneratedDay, Gen
 export const maxDuration = 300;
 export const runtime = "nodejs";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 const client = new Anthropic();
 
 // V2: LLM은 날짜 없이 세션 목록만 출력. 코드가 날짜 배정.
@@ -613,7 +623,7 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON" }, { status: 400, headers: CORS_HEADERS });
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -926,6 +936,6 @@ sessions 배열 개수 = ${lastWeekEligibleCount} (대회 당일 race 세션 포
   });
 
   return new Response(stream, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: { ...CORS_HEADERS, "Content-Type": "text/plain; charset=utf-8" },
   });
 }

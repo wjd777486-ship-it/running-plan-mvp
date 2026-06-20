@@ -38,7 +38,7 @@ export default function OnboardingPage() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const adLoadedRef = useRef(false);
 
-  const AD_GROUP_ID = "ait-ad-test-interstitial-id"; // TODO: 콘솔에서 발급받은 실제 adGroupId로 교체
+  const AD_GROUP_ID = "ait.v2.live.28b103ff42b44230";
 
   useEffect(() => {
     if (appStep !== "result") return;

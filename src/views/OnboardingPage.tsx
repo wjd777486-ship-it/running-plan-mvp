@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { loadFullScreenAd, showFullScreenAd } from "@apps-in-toss/web-framework";
 import { getTossUserId, type TossProfile } from "../lib/tossAuth";
 import type { RunnerFormData, ValidationResult, GeneratedPlan } from "../lib/types";
 import { trackEvent } from "../lib/analytics";
@@ -35,6 +36,43 @@ export default function OnboardingPage() {
   const [step2Errors, setStep2Errors] = useState<{ age?: string }>({});
   const [step3Errors, setStep3Errors] = useState<{ trainingDays?: string; joggingHr?: string; runningHr?: string }>({});
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const adLoadedRef = useRef(false);
+
+  const AD_GROUP_ID = "ait-ad-test-interstitial-id"; // TODO: 콘솔에서 발급받은 실제 adGroupId로 교체
+
+  useEffect(() => {
+    if (appStep !== "result") return;
+    if (!loadFullScreenAd.isSupported()) return;
+
+    adLoadedRef.current = false;
+    const unregister = loadFullScreenAd({
+      options: { adGroupId: AD_GROUP_ID },
+      onEvent: (event) => {
+        if (event.type === "loaded") adLoadedRef.current = true;
+      },
+      onError: () => {},
+    });
+    return () => { unregister(); adLoadedRef.current = false; };
+  }, [appStep]);
+
+  function showAdIfReady(): Promise<void> {
+    return new Promise((resolve) => {
+      if (!adLoadedRef.current || !showFullScreenAd.isSupported()) {
+        resolve();
+        return;
+      }
+      showFullScreenAd({
+        options: { adGroupId: AD_GROUP_ID },
+        onEvent: (event) => {
+          if (event.type === "dismissed" || event.type === "failedToShow") {
+            adLoadedRef.current = false;
+            resolve();
+          }
+        },
+        onError: () => resolve(),
+      });
+    });
+  }
 
   function showToast(msg: string) {
     setToast(msg);
@@ -180,60 +218,90 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleGenerate(useAiGoal: boolean) {
-    if (!validationResult) return;
-
-    setError(null);
-    setGeneratingWeeks(validationResult.validation.training_period.total_weeks);
-    setAppStep("generating");
-
+  async function doGenerate(useAiGoal: boolean): Promise<string> {
     let formData = form;
-    if (useAiGoal && validationResult.validation.realistic_goal.suggested_time) {
-      const parts = validationResult.validation.realistic_goal.suggested_time.split(":").map(Number);
+    if (useAiGoal && validationResult!.validation.realistic_goal.suggested_time) {
+      const parts = validationResult!.validation.realistic_goal.suggested_time.split(":").map(Number);
       const goalHours = parts.length === 3 ? parts[0] : 0;
       const goalMinutes = parts.length === 3 ? parts[1] : parts[0];
       formData = { ...form, goalHours, goalMinutes };
     }
 
-    try {
-      const genRes = await fetch(`${API_BASE_URL}/api/generate-v2`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formData, validation: validationResult, useAiGoal }),
-      });
-      if (!genRes.ok) throw new Error(`플랜 생성 실패 (${genRes.status})`);
-      if (!genRes.body) throw new Error("스트림 응답 없음");
+    const genRes = await fetch(`${API_BASE_URL}/api/generate-v2`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ formData, validation: validationResult, useAiGoal }),
+    });
+    if (!genRes.ok) throw new Error(`플랜 생성 실패 (${genRes.status})`);
+    if (!genRes.body) throw new Error("스트림 응답 없음");
 
-      const reader = genRes.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
+    const reader = genRes.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        fullText += chunk;
-
-        if (fullText.includes("__ERROR__:")) {
-          const msg = fullText.split("__ERROR__:")[1].trim();
-          throw new Error(msg);
-        }
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      fullText += chunk;
+      if (fullText.includes("__ERROR__:")) {
+        throw new Error(fullText.split("__ERROR__:")[1].trim());
       }
-
-      const planMarker = "__PLAN_WITH_DATES__:";
-      if (!fullText.includes(planMarker)) throw new Error("플랜 응답에서 날짜 배정 데이터를 찾을 수 없어요. 다시 시도해주세요.");
-      const generatedPlan: GeneratedPlan = JSON.parse(fullText.split(planMarker)[1]);
-      setGeneratingWeeks(generatedPlan.plan_summary.total_weeks);
-      const userId = tossProfile?.userId ?? await getTossUserId();
-      const result = await createPlan(form, generatedPlan, userId);
-      if ("error" in result) throw new Error(result.error);
-
-      localStorage.setItem("plan_id", result.planId);
-      navigate(`/plan?id=${result.planId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
-      setAppStep("result");
     }
+
+    const planMarker = "__PLAN_WITH_DATES__:";
+    if (!fullText.includes(planMarker)) throw new Error("플랜 응답에서 날짜 배정 데이터를 찾을 수 없어요. 다시 시도해주세요.");
+    const generatedPlan: GeneratedPlan = JSON.parse(fullText.split(planMarker)[1]);
+    setGeneratingWeeks(generatedPlan.plan_summary.total_weeks);
+    const userId = tossProfile?.userId ?? await getTossUserId();
+    const result = await createPlan(form, generatedPlan, userId);
+    if ("error" in result) throw new Error(result.error);
+    return result.planId;
+  }
+
+  async function handleGenerate(useAiGoal: boolean) {
+    if (!validationResult) return;
+    setError(null);
+    setGeneratingWeeks(validationResult.validation.training_period.total_weeks);
+
+    // 광고와 generate를 동시에 시작
+    let planId: string | null = null;
+    let genError: Error | null = null;
+    let genDone = false;
+
+    const genPromise = doGenerate(useAiGoal)
+      .then((id) => { planId = id; genDone = true; })
+      .catch((err) => { genError = err instanceof Error ? err : new Error(String(err)); genDone = true; });
+
+    if (adLoadedRef.current && showFullScreenAd.isSupported()) {
+      await new Promise<void>((resolve) => {
+        showFullScreenAd({
+          options: { adGroupId: AD_GROUP_ID },
+          onEvent: (event) => {
+            if (event.type === "dismissed" || event.type === "failedToShow") {
+              adLoadedRef.current = false;
+              resolve();
+            }
+          },
+          onError: () => resolve(),
+        });
+      });
+    }
+
+    // 광고 종료 후 generate가 아직 안 끝났으면 로딩 화면 표시
+    if (!genDone) {
+      setAppStep("generating");
+      await genPromise;
+    }
+
+    if (genError) {
+      setError(genError.message);
+      setAppStep("result");
+      return;
+    }
+
+    localStorage.setItem("plan_id", planId!);
+    navigate(`/plan?id=${planId}`);
   }
 
   const minDate = new Date();
